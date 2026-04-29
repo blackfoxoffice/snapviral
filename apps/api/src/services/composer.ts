@@ -1,0 +1,242 @@
+import path from 'node:path';
+import ffmpeg from 'fluent-ffmpeg';
+import type { ElevenLabsAlignment, Scene } from '@newsflow/shared';
+
+if (process.env.FFMPEG_PATH) ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
+
+const FPS = 30;
+const WIDTH = 1080;
+const HEIGHT = 1920;
+
+export function computeSceneDurations(args: {
+  scenes: Scene[];
+  alignment: ElevenLabsAlignment;
+  targetTotalSeconds: number;
+}): number[] {
+  const { scenes, alignment, targetTotalSeconds } = args;
+  const { characters, character_end_times_seconds } = alignment;
+  const totalAudio =
+    character_end_times_seconds[character_end_times_seconds.length - 1] ?? targetTotalSeconds;
+
+  const fullText = characters.join('');
+  const markers = scenes.map((s) => s.narration.trim());
+
+  const boundaries: number[] = [];
+  let cursor = 0;
+  for (const marker of markers) {
+    const idx = fullText.indexOf(marker, cursor);
+    if (idx < 0) {
+      boundaries.push(-1);
+      continue;
+    }
+    const endCharIdx = idx + marker.length - 1;
+    const endTime =
+      character_end_times_seconds[endCharIdx] ??
+      character_end_times_seconds[character_end_times_seconds.length - 1] ??
+      totalAudio;
+    boundaries.push(endTime);
+    cursor = idx + marker.length;
+  }
+
+  const fallbackPerScene = totalAudio / scenes.length;
+  const durations: number[] = [];
+  let prevEnd = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const end = boundaries[i];
+    if (end && end > prevEnd) {
+      durations.push(Number((end - prevEnd).toFixed(3)));
+      prevEnd = end;
+    } else {
+      durations.push(Number(fallbackPerScene.toFixed(3)));
+      prevEnd = (i + 1) * fallbackPerScene;
+    }
+  }
+
+  const sum = durations.reduce((a, b) => a + b, 0);
+  const last = durations[durations.length - 1] ?? 0;
+  if (sum < totalAudio) {
+    durations[durations.length - 1] = Number((last + (totalAudio - sum)).toFixed(3));
+  }
+
+  return durations;
+}
+
+export async function composeFinalVideoFiles(args: {
+  imagePaths: string[];
+  sceneDurations: number[];
+  audioPath: string;
+  srtPath: string;
+  outputPath: string;
+  tmpDir: string;
+  logoPath?: string;
+  title?: string;
+}): Promise<void> {
+  const { imagePaths, sceneDurations, audioPath, srtPath, outputPath, tmpDir, logoPath, title } = args;
+
+  const sceneClips: string[] = [];
+  for (let i = 0; i < imagePaths.length; i++) {
+    const img = imagePaths[i]!;
+    const dur = Math.max(0.8, sceneDurations[i] ?? 2);
+    const clipPath = path.join(tmpDir, `scene-${String(i).padStart(2, '0')}.mp4`);
+    await makeSceneClip(img, dur, clipPath, logoPath);
+    sceneClips.push(clipPath);
+  }
+
+  const listFilePath = path.join(tmpDir, 'concat.txt');
+  const concatBody = sceneClips.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join('\n');
+  const fs = await import('node:fs/promises');
+  await fs.writeFile(listFilePath, concatBody, 'utf8');
+
+  const silentConcatPath = path.join(tmpDir, 'silent-concat.mp4');
+  await concatClips(listFilePath, silentConcatPath);
+
+  await finalMux({
+    silentVideoPath: silentConcatPath,
+    audioPath,
+    srtPath,
+    outputPath,
+    title,
+  });
+}
+
+async function makeSceneClip(
+  imagePath: string,
+  durationS: number,
+  outPath: string,
+  logoPath?: string,
+): Promise<void> {
+  const frames = Math.max(2, Math.ceil(durationS * FPS));
+  const LOGO_H = 80;
+  const LOGO_PAD = 30;
+
+  let fc: string;
+  if (logoPath) {
+    fc =
+      `[0:v]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,` +
+      `crop=${WIDTH}:${HEIGHT},` +
+      `zoompan=z='min(zoom+0.0015,1.15)':d=${frames}:s=${WIDTH}x${HEIGHT}:fps=${FPS}[bg];` +
+      `[1:v]scale=-1:${LOGO_H}[logo];` +
+      `[bg][logo]overlay=W-w-${LOGO_PAD}:${LOGO_PAD}[v]`;
+  } else {
+    fc =
+      `[0:v]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,` +
+      `crop=${WIDTH}:${HEIGHT},` +
+      `zoompan=z='min(zoom+0.0015,1.15)':d=${frames}:s=${WIDTH}x${HEIGHT}:fps=${FPS}[v]`;
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const cmd = ffmpeg()
+      .input(imagePath)
+      .inputOptions(['-loop 1']);
+
+    if (logoPath) {
+      cmd.input(logoPath);
+    }
+
+    cmd
+      .complexFilter(fc)
+      .outputOptions([
+        '-map', '[v]',
+        '-t', String(durationS),
+        '-pix_fmt', 'yuv420p',
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-r', String(FPS),
+        '-an',
+      ])
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .save(outPath);
+  });
+}
+
+async function concatClips(listFilePath: string, outPath: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg()
+      .input(listFilePath)
+      .inputOptions(['-f concat', '-safe 0'])
+      .outputOptions(['-c copy'])
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .save(outPath);
+  });
+}
+
+let _filterCaps: { subtitles: boolean; drawtext: boolean } | null = null;
+async function checkFilterCaps(): Promise<{ subtitles: boolean; drawtext: boolean }> {
+  if (_filterCaps) return _filterCaps;
+  const { execSync } = await import('node:child_process');
+  try {
+    const ffmpegBin = process.env.FFMPEG_PATH ?? 'ffmpeg';
+    const out = execSync(`${ffmpegBin} -filters 2>/dev/null`, { encoding: 'utf8' });
+    _filterCaps = {
+      subtitles: out.includes(' subtitles '),
+      drawtext: out.includes(' drawtext '),
+    };
+  } catch {
+    _filterCaps = { subtitles: false, drawtext: false };
+  }
+  return _filterCaps;
+}
+
+async function finalMux(args: {
+  silentVideoPath: string;
+  audioPath: string;
+  srtPath: string;
+  outputPath: string;
+  title?: string;
+}): Promise<void> {
+  const caps = await checkFilterCaps();
+  const filters: string[] = [];
+
+  if (caps.subtitles) {
+    const subs =
+      `subtitles=${escapeForFilter(args.srtPath)}:force_style='` +
+      `FontName=Tamil Sangam MN,FontSize=28,` +
+      `PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BackColour=&H00000000&,` +
+      `BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=60'`;
+    filters.push(subs);
+  }
+
+  if (caps.drawtext && args.title) {
+    // Persistent headline banner at top
+    const titleEscaped = args.title.replace(/'/g, "'\\''").replace(/:/g, '\\:');
+    const titleFilter =
+      `drawtext=text='${titleEscaped}':` +
+      `fontsize=36:fontcolor=white:borderw=2:bordercolor=black:` +
+      `x=(w-text_w)/2:y=40`;
+    filters.push(titleFilter);
+  }
+
+  const hasBurn = filters.length > 0;
+
+  return new Promise<void>((resolve, reject) => {
+    const cmd = ffmpeg()
+      .input(args.silentVideoPath)
+      .input(args.audioPath);
+
+    if (hasBurn) {
+      cmd.videoFilters(filters);
+    }
+
+    cmd
+      .outputOptions([
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-c:v', hasBurn ? 'libx264' : 'copy',
+        ...(hasBurn ? ['-preset', 'medium', '-crf', '21', '-pix_fmt', 'yuv420p'] : []),
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-movflags', '+faststart',
+        '-shortest',
+      ])
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .save(args.outputPath);
+  });
+}
+
+function escapeForFilter(p: string): string {
+  return p.replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "\\'");
+}

@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Newsflow Studio",
+    "slug": "newsflow-studio",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "newsflow",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.newsflow.studio"
+    },
+    "android": {
+      "package": "com.newsflow.studio",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "Newsflow Studio",
+      "shortName": "Newsflow",
+      "themeColor": "#FF0033",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone"
+    },
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

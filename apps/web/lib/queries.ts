@@ -1,0 +1,180 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CreateProjectInput, SocialHandles } from '@newsflow/shared';
+import { api } from './api';
+
+export const qk = {
+  dashboardStats: ['dashboard', 'stats'] as const,
+  projects: ['projects'] as const,
+  project: (id: string) => ['projects', id] as const,
+  voices: (language: string) => ['voices', language] as const,
+  logo: ['profile', 'logo'] as const,
+  social: ['profile', 'social'] as const,
+  ytStatus: ['youtube', 'status'] as const,
+};
+
+export function useDashboardStats() {
+  return useQuery({
+    queryKey: qk.dashboardStats,
+    queryFn: api.getDashboardStats,
+    refetchInterval: 30000,
+  });
+}
+
+export function useProjects() {
+  return useQuery({
+    queryKey: qk.projects,
+    queryFn: api.listProjects,
+  });
+}
+
+export function useProject(id: string | undefined, opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: id ? qk.project(id) : ['projects', 'none'],
+    queryFn: () => api.getProject(id as string),
+    enabled: !!id && (opts.enabled ?? true),
+    refetchInterval: 4000,
+  });
+}
+
+export function useLogo() {
+  return useQuery({
+    queryKey: qk.logo,
+    queryFn: api.getLogo,
+  });
+}
+
+export function useUploadLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dataUrl: string) => api.uploadLogo(dataUrl),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.logo });
+    },
+  });
+}
+
+export function useDeleteLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.deleteLogo(),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.logo });
+    },
+  });
+}
+
+export function useVoices(language: string) {
+  return useQuery({
+    queryKey: qk.voices(language),
+    queryFn: () => api.listVoices(language),
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateProjectInput) => api.createProject(input),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
+export function useGenerateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.generate(id),
+    onSuccess(_data, id) {
+      qc.invalidateQueries({ queryKey: qk.project(id) });
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteProject(id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
+export function useSocialHandles() {
+  return useQuery({
+    queryKey: qk.social,
+    queryFn: api.getSocialHandles,
+  });
+}
+
+export function useUpdateSocialHandles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (handles: Partial<SocialHandles>) => api.updateSocialHandles(handles),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.social });
+    },
+  });
+}
+
+export function useYouTubeStatus() {
+  return useQuery({
+    queryKey: qk.ytStatus,
+    queryFn: api.getYouTubeStatus,
+  });
+}
+
+export function useDisconnectYouTube() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.disconnectYouTube(),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.ytStatus });
+    },
+  });
+}
+
+export function useGenerateYouTubeMetadata() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) => api.generateYouTubeMetadata(projectId),
+    onSuccess(_data, projectId) {
+      qc.invalidateQueries({ queryKey: qk.project(projectId) });
+    },
+  });
+}
+
+export function usePublishToYouTube() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { projectId: string; title?: string; description?: string; tags?: string[]; privacy?: 'public' | 'unlisted' | 'private'; scheduled_at?: string | null }) =>
+      api.publishToYouTube(args.projectId, args),
+    onSuccess(_data, args) {
+      qc.invalidateQueries({ queryKey: qk.project(args.projectId) });
+      qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
+export function useScheduleYouTube() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { projectId: string; scheduled_at: string; title?: string; description?: string; tags?: string[]; privacy?: 'public' | 'unlisted' | 'private' }) =>
+      api.scheduleYouTube(args.projectId, args),
+    onSuccess(_data, args) {
+      qc.invalidateQueries({ queryKey: qk.project(args.projectId) });
+      qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
+export function useCancelSchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: string) => api.cancelSchedule(projectId),
+    onSuccess(_data, projectId) {
+      qc.invalidateQueries({ queryKey: qk.project(projectId) });
+    },
+  });
+}
