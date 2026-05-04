@@ -103,7 +103,7 @@ export default function Terms() {
 
         <Section title="Contact">
           Questions? Email{' '}
-          <Link href="mailto:Karthikeyanai2000@gmail.com">Karthikeyanai2000@gmail.com</Link>.
+          <Link href="mailto:developer@blackfoxoffice.com">developer@blackfoxoffice.com</Link>.
         </Section>
       </View>
     </ScrollView>
