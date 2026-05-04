@@ -1,0 +1,14 @@
+# Don't ship the local .env files to Vercel — env vars come from Vercel project settings instead
+.env
+.env.*
+!.env.example
+
+# Local logs / build artifacts
+*.log
+.DS_Store
+node_modules
+apps/api/dist
+.expo
+
+# API server isn't deployed on Vercel
+apps/api
