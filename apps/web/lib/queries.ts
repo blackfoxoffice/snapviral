@@ -10,6 +10,10 @@ export const qk = {
   logo: ['profile', 'logo'] as const,
   social: ['profile', 'social'] as const,
   ytStatus: ['youtube', 'status'] as const,
+  adminOverview: ['admin', 'overview'] as const,
+  adminSecrets: ['admin', 'secrets'] as const,
+  adminAuditLog: ['admin', 'audit'] as const,
+  adminUsers: ['admin', 'users'] as const,
 };
 
 export function useDashboardStats() {
@@ -176,5 +180,71 @@ export function useCancelSchedule() {
     onSuccess(_data, projectId) {
       qc.invalidateQueries({ queryKey: qk.project(projectId) });
     },
+  });
+}
+
+// ===== Admin =====
+
+export function useAdminOverview() {
+  return useQuery({
+    queryKey: qk.adminOverview,
+    queryFn: api.getAdminOverview,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAdminSecrets() {
+  return useQuery({
+    queryKey: qk.adminSecrets,
+    queryFn: api.listAdminSecrets,
+  });
+}
+
+export function useCreateAdminSecret() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { key_name: string; value: string; description?: string }) =>
+      api.createAdminSecret(args),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminSecrets });
+      qc.invalidateQueries({ queryKey: qk.adminAuditLog });
+    },
+  });
+}
+
+export function useRotateAdminSecret() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { key_name: string; value: string }) =>
+      api.rotateAdminSecret(args.key_name, args.value),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminSecrets });
+      qc.invalidateQueries({ queryKey: qk.adminAuditLog });
+    },
+  });
+}
+
+export function useDeleteAdminSecret() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key_name: string) => api.deleteAdminSecret(key_name),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminSecrets });
+      qc.invalidateQueries({ queryKey: qk.adminAuditLog });
+    },
+  });
+}
+
+export function useAdminAuditLog(limit = 50) {
+  return useQuery({
+    queryKey: [...qk.adminAuditLog, limit],
+    queryFn: () => api.getAdminAuditLog(limit),
+  });
+}
+
+export function useAdminUsers() {
+  return useQuery({
+    queryKey: qk.adminUsers,
+    queryFn: api.listAdminUsers,
   });
 }

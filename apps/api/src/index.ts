@@ -9,6 +9,7 @@ import { voicesRouter } from './routes/voices.js';
 import { profileRouter } from './routes/profile.js';
 import { youtubeRouter } from './routes/youtube.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { adminRouter } from './routes/admin.js';
 import { errorHandler } from './middleware/error.js';
 import { startScheduler } from './services/scheduler.js';
 
@@ -35,6 +36,7 @@ app.use('/api/voices', voicesRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/youtube', youtubeRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/admin', adminRouter);
 
 app.use(errorHandler);
 

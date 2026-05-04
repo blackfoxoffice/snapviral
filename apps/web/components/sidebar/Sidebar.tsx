@@ -11,9 +11,11 @@ import {
   LogOut,
   ChevronsLeft,
   ChevronsRight,
+  Shield,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
+import { useIsAdmin } from '../../lib/admin';
 import { NewsflowLogo } from '../icons/NewsflowLogo';
 import { useSidebarCollapsed } from '../../lib/sidebar';
 
@@ -43,8 +45,13 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const { collapsed, toggle } = useSidebarCollapsed();
+  const isAdmin = useIsAdmin();
 
   if (width < 768) return null;
+
+  const navItems: NavItem[] = isAdmin
+    ? [...NAV.slice(0, NAV.length - 1), { href: '/admin', label: 'Admin', Icon: Shield }, NAV[NAV.length - 1]!]
+    : NAV;
 
   const name =
     (user?.user_metadata?.full_name as string | undefined) ??
@@ -72,7 +79,7 @@ export function Sidebar() {
 
       {/* Nav items */}
       <View className="flex-1 px-2 gap-0.5">
-        {NAV.map((item) => {
+        {navItems.map((item) => {
           const active =
             pathname === item.href ||
             (item.href !== '/dashboard' && pathname.startsWith(item.href));

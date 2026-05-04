@@ -1,5 +1,13 @@
 import { supabase } from './supabase';
-import type { Project, ProjectWithRelations, SocialHandles, YouTubeConnection } from '@newsflow/shared';
+import type {
+  AdminOverview,
+  AdminSecret,
+  Project,
+  ProjectWithRelations,
+  SecretAccessLogEntry,
+  SocialHandles,
+  YouTubeConnection,
+} from '@newsflow/shared';
 import type { CreateProjectInput } from '@newsflow/shared';
 
 export interface YouTubeMetadata {
@@ -242,5 +250,59 @@ export const api = {
       headers: await authHeaders(),
     });
     await parseResponse(res);
+  },
+
+  // ===== Admin =====
+
+  async getAdminOverview(): Promise<AdminOverview> {
+    const res = await fetch(`${BASE_URL}/api/admin/overview`, { headers: await authHeaders() });
+    return parseResponse<AdminOverview>(res);
+  },
+
+  async listAdminSecrets(): Promise<AdminSecret[]> {
+    const res = await fetch(`${BASE_URL}/api/admin/secrets`, { headers: await authHeaders() });
+    return parseResponse<AdminSecret[]>(res);
+  },
+
+  async createAdminSecret(args: {
+    key_name: string;
+    value: string;
+    description?: string;
+  }): Promise<{ ok: boolean }> {
+    const res = await fetch(`${BASE_URL}/api/admin/secrets`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse(res);
+  },
+
+  async rotateAdminSecret(key_name: string, value: string): Promise<{ ok: boolean }> {
+    const res = await fetch(`${BASE_URL}/api/admin/secrets/${encodeURIComponent(key_name)}/rotate`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ value }),
+    });
+    return parseResponse(res);
+  },
+
+  async deleteAdminSecret(key_name: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/admin/secrets/${encodeURIComponent(key_name)}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
+  },
+
+  async getAdminAuditLog(limit = 50): Promise<SecretAccessLogEntry[]> {
+    const res = await fetch(`${BASE_URL}/api/admin/audit-log?limit=${limit}`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse<SecretAccessLogEntry[]>(res);
+  },
+
+  async listAdminUsers(): Promise<Array<{ id: string; email: string; full_name: string; is_admin: boolean; created_at: string }>> {
+    const res = await fetch(`${BASE_URL}/api/admin/users`, { headers: await authHeaders() });
+    return parseResponse(res);
   },
 };

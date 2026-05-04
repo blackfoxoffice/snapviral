@@ -1,4 +1,5 @@
 import type { ElevenLabsAlignment, ProjectLanguage } from '@newsflow/shared';
+import { requireSecret } from './secrets.js';
 
 const VOICE_ID_BY_LANG: Record<ProjectLanguage, string | undefined> = {
   ta: process.env.ELEVENLABS_VOICE_ID_TAMIL,
@@ -11,8 +12,7 @@ export async function generateTtsWithAlignment(args: {
   language: ProjectLanguage;
   voiceId?: string | null;
 }): Promise<{ audio: Buffer; alignment: ElevenLabsAlignment }> {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) throw new Error('ELEVENLABS_API_KEY is not set');
+  const apiKey = await requireSecret('ELEVENLABS_API_KEY');
   const voiceId = args.voiceId || VOICE_ID_BY_LANG[args.language];
   if (!voiceId)
     throw new Error(

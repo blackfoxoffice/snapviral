@@ -1,18 +1,21 @@
 import { getServiceClient } from './supabase.js';
+import { getSecret, requireSecret } from './secrets.js';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const YT_UPLOAD_URL = 'https://www.googleapis.com/upload/youtube/v3/videos';
 const YT_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
 
-function getClientCredentials() {
+async function getClientCredentials() {
+  // GOOGLE_CLIENT_ID is not secret (visible in OAuth URLs); read from env.
+  // GOOGLE_CLIENT_SECRET is sensitive — read from vault, with env fallback.
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientSecret = (await getSecret('GOOGLE_CLIENT_SECRET')) ?? process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required');
   return { clientId, clientSecret };
 }
 
-export function getOAuthUrl(redirectUri: string, state: string): string {
-  const { clientId } = getClientCredentials();
+export async function getOAuthUrl(redirectUri: string, state: string): Promise<string> {
+  const { clientId } = await getClientCredentials();
   const scopes = [
     'https://www.googleapis.com/auth/youtube.upload',
     'https://www.googleapis.com/auth/youtube.readonly',
@@ -34,7 +37,7 @@ export async function exchangeCode(code: string, redirectUri: string): Promise<{
   refresh_token: string;
   expires_in: number;
 }> {
-  const { clientId, clientSecret } = getClientCredentials();
+  const { clientId, clientSecret } = await getClientCredentials();
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -57,7 +60,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
   access_token: string;
   expires_in: number;
 }> {
-  const { clientId, clientSecret } = getClientCredentials();
+  const { clientId, clientSecret } = await getClientCredentials();
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

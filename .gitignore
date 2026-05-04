@@ -31,3 +31,4 @@ Thumbs.db
 # pipeline artifacts (local dev only)
 tmp/
 apps/api/tmp/
+.vercel

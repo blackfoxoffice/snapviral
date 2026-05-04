@@ -38,8 +38,37 @@ export interface Profile {
   social_tiktok: string | null;
   yt_channel_id: string | null;
   yt_channel_name: string | null;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminSecret {
+  key_name: string;
+  description: string | null;
+  last4: string | null;
+  created_at: string;
+  rotated_at: string | null;
+}
+
+export interface SecretAccessLogEntry {
+  id: string;
+  key_name: string;
+  action: 'read' | 'create' | 'rotate' | 'delete';
+  actor_id: string | null;
+  actor_role: string | null;
+  created_at: string;
+}
+
+export interface AdminOverview {
+  user_count: number;
+  project_count: number;
+  ready_videos: number;
+  published_videos: number;
+  scheduled_videos: number;
+  failed_videos: number;
+  active_jobs: number;
+  total_storage_seconds: number;
 }
 
 export interface Project {

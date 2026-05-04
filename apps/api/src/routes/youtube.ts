@@ -15,10 +15,10 @@ export const youtubeRouter = Router();
 
 youtubeRouter.use(requireAuth);
 
-youtubeRouter.get('/auth-url', (req: Request, res: Response) => {
+youtubeRouter.get('/auth-url', async (req: Request, res: Response) => {
   const { user } = req as AuthedRequest;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
-  const url = getOAuthUrl(redirectUri, user.id);
+  const url = await getOAuthUrl(redirectUri, user.id);
   res.json({ url });
 });
 

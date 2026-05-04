@@ -1,5 +1,6 @@
 import type { ImageStyle, ProjectLanguage, ResearchResult, ScriptOutput } from '@newsflow/shared';
 import type { SourceContext } from '../pipeline/steps/01-ingest.js';
+import { requireSecret } from './secrets.js';
 
 const LANG_NAME: Record<ProjectLanguage, string> = { ta: 'Tamil', en: 'English', hi: 'Hindi' };
 
@@ -109,8 +110,7 @@ export async function callGeminiScript(args: {
   language: ProjectLanguage;
   durationSeconds: number;
 }): Promise<ScriptOutput> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+  const apiKey = await requireSecret('OPENROUTER_API_KEY');
 
   const systemPrompt = buildScriptSystemPrompt(
     args.source.mode,
@@ -155,8 +155,7 @@ export async function callPerplexityResearch(args: {
   topic: string;
   extraContext?: string;
 }): Promise<ResearchResult> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+  const apiKey = await requireSecret('OPENROUTER_API_KEY');
 
   const systemPrompt = `You are a news researcher. Given a topic, search the web for the most current, reliable reporting and return a factual English briefing for a downstream scriptwriter.
 
@@ -225,8 +224,7 @@ export function getStyledVisualPrompt(visualPrompt: string, imageStyle: ImageSty
 }
 
 export async function callNanoBananaImage(visualPrompt: string): Promise<Buffer> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+  const apiKey = await requireSecret('OPENROUTER_API_KEY');
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
