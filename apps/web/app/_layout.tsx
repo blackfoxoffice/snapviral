@@ -27,6 +27,8 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(app)" />
+            <Stack.Screen name="privacy" options={{ title: 'Privacy Policy' }} />
+            <Stack.Screen name="terms" options={{ title: 'Terms of Service' }} />
             <Stack.Screen name="+not-found" options={{ title: 'Not found' }} />
           </Stack>
           <ToastHost />
