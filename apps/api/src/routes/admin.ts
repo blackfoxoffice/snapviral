@@ -6,6 +6,26 @@ import { createProductsIfMissing } from '../services/billing.js';
 
 export const adminRouter = Router();
 
+// Bootstrap-only route — registered BEFORE requireAuth so it can be hit
+// without a user JWT. Authenticated by knowledge of the Supabase service
+// role key (highly privileged, already a secret) via X-Setup-Bootstrap header.
+// Used once to provision Dodo products before any admin user exists.
+adminRouter.post('/bootstrap/setup-dodo-products', async (req: Request, res: Response) => {
+  const provided = req.header('x-setup-bootstrap') ?? '';
+  const expected = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  if (!expected || provided !== expected) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  try {
+    const result = await createProductsIfMissing();
+    res.json({ ok: true, created: result.created, existed: result.existed });
+  } catch (e) {
+    console.error('[admin] bootstrap setup failed:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'setup failed' });
+  }
+});
+
 adminRouter.use(requireAuth);
 
 // Gate every admin route on the is_admin flag in profiles
@@ -130,6 +150,11 @@ adminRouter.delete('/secrets/:key', async (req: Request, res: Response) => {
 });
 
 // ===== Dodo Payments setup (one-shot) =====
+//
+// Two ways to authenticate:
+//   1. Logged-in admin user (default — gated by the requireAdmin middleware above)
+//   2. Service-role key in `X-Setup-Bootstrap` header — for one-time provisioning
+//      from outside any user session. Match against SUPABASE_SERVICE_ROLE_KEY.
 adminRouter.post('/setup-dodo-products', async (_req: Request, res: Response) => {
   try {
     const result = await createProductsIfMissing();
@@ -138,9 +163,10 @@ adminRouter.post('/setup-dodo-products', async (_req: Request, res: Response) =>
       created: result.created,
       existed: result.existed,
       next_steps: [
-        'Copy the env var lines printed above to Railway',
-        'Restart the API service',
-        'Test checkout from /billing page',
+        'Copy the DODO_PRODUCT_* lines from Railway logs',
+        'Add them as env vars on the Railway service',
+        'Wait ~30s for Railway to redeploy',
+        'Test checkout on /billing',
       ],
     });
   } catch (e) {
