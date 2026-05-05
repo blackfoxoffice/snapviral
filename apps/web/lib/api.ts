@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import type {
   AdminOverview,
   AdminSecret,
+  AutomationSettings,
+  AutomationStatus,
   BillingMe,
   Currency,
   Plan,
@@ -10,6 +12,7 @@ import type {
   ProjectWithRelations,
   SecretAccessLogEntry,
   SocialHandles,
+  TopicQueueItem,
   YouTubeConnection,
 } from '@newsflow/shared';
 import type { CreateProjectInput } from '@newsflow/shared';
@@ -340,5 +343,46 @@ export const api = {
       headers: await authHeaders(),
     });
     return parseResponse<{ url: string }>(res);
+  },
+
+  // ===== Automation =====
+
+  async getAutomationStatus(): Promise<AutomationStatus> {
+    const res = await fetch(`${BASE_URL}/api/automation/status`, { headers: await authHeaders() });
+    return parseResponse<AutomationStatus>(res);
+  },
+
+  async updateAutomationSettings(settings: Partial<AutomationSettings>): Promise<{ ok: boolean }> {
+    const res = await fetch(`${BASE_URL}/api/automation/settings`, {
+      method: 'PUT',
+      headers: await authHeaders(),
+      body: JSON.stringify(settings),
+    });
+    return parseResponse(res);
+  },
+
+  async addTopics(topics: string[]): Promise<{ added: number; topics: TopicQueueItem[] }> {
+    const res = await fetch(`${BASE_URL}/api/automation/topics`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ topics }),
+    });
+    return parseResponse(res);
+  },
+
+  async deleteTopic(id: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/automation/topics/${id}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
+  },
+
+  async clearTopics(): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/automation/topics`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
   },
 };

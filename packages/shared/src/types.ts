@@ -86,6 +86,36 @@ export interface PlanDef {
   features: string[];
 }
 
+export interface AutomationSettings {
+  auto_publish_enabled: boolean;
+  publish_times: string[];
+  automation_language: ProjectLanguage;
+  automation_image_style: ImageStyle;
+  automation_voice_id: string | null;
+  automation_duration_seconds: number;
+  automation_input_mode: 'topic' | 'research';
+  automation_privacy: 'public' | 'unlisted' | 'private';
+}
+
+export interface TopicQueueItem {
+  id: string;
+  topic: string;
+  position: number;
+  used: boolean;
+  used_at: string | null;
+  project_id: string | null;
+  created_at: string;
+}
+
+export interface AutomationStatus {
+  settings: AutomationSettings;
+  plan: Plan;
+  daily_video_limit: number;
+  used_today: number;
+  queue: TopicQueueItem[];
+  queue_unused_count: number;
+}
+
 export interface BillingMe {
   plan: Plan;
   plan_status: PlanStatus;

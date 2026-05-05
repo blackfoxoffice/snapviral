@@ -16,6 +16,7 @@ export const qk = {
   adminUsers: ['admin', 'users'] as const,
   billingPlans: ['billing', 'plans'] as const,
   billingMe: ['billing', 'me'] as const,
+  automationStatus: ['automation', 'status'] as const,
 };
 
 export function useDashboardStats() {
@@ -278,5 +279,55 @@ export function useCreateBillingCheckout() {
 export function useOpenBillingPortal() {
   return useMutation({
     mutationFn: api.openBillingPortal,
+  });
+}
+
+// ===== Automation =====
+
+export function useAutomationStatus() {
+  return useQuery({
+    queryKey: qk.automationStatus,
+    queryFn: api.getAutomationStatus,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useUpdateAutomationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.updateAutomationSettings,
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.automationStatus });
+    },
+  });
+}
+
+export function useAddTopics() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (topics: string[]) => api.addTopics(topics),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.automationStatus });
+    },
+  });
+}
+
+export function useDeleteTopic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTopic(id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.automationStatus });
+    },
+  });
+}
+
+export function useClearTopics() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.clearTopics(),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.automationStatus });
+    },
   });
 }
