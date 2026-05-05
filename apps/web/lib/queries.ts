@@ -331,3 +331,10 @@ export function useClearTopics() {
     },
   });
 }
+
+export function useGenerateTopicSuggestions() {
+  return useMutation({
+    mutationFn: (args: { language?: 'ta' | 'en' | 'hi'; niche?: string; count?: number }) =>
+      api.generateTopicSuggestions(args),
+  });
+}

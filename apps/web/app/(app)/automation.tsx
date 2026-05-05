@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
 } from 'react-native';
+// (TextInput is used in the AddTimePicker for HH:MM minute-precise input)
 import {
   Zap,
   Trash2,
@@ -18,9 +19,9 @@ import {
   Calendar,
   CheckCircle2,
   Wand2,
-  Globe,
   AlertTriangle,
   ListChecks,
+  Sparkles,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import type {
@@ -43,18 +44,9 @@ import {
   useAddTopics,
   useDeleteTopic,
   useClearTopics,
+  useGenerateTopicSuggestions,
   useYouTubeStatus,
 } from '../../lib/queries';
-
-const TIME_OPTIONS: string[] = (() => {
-  const times: string[] = [];
-  for (let h = 0; h < 24; h++) {
-    for (const m of [0, 30]) {
-      times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-    }
-  }
-  return times;
-})();
 
 const LANG_OPTS: { value: ProjectLanguage; label: string }[] = [
   { value: 'ta', label: 'Tamil' },
@@ -88,10 +80,54 @@ export default function AutomationPage() {
   const addMut = useAddTopics();
   const deleteMut = useDeleteTopic();
   const clearMut = useClearTopics();
+  const generateMut = useGenerateTopicSuggestions();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
   const [topicsInput, setTopicsInput] = useState('');
+  const [niche, setNiche] = useState('');
+  const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
+  const [selectedGenerated, setSelectedGenerated] = useState<Set<number>>(new Set());
+
+  async function handleGenerateTopics() {
+    setGeneratedTopics([]);
+    setSelectedGenerated(new Set());
+    try {
+      const result = await generateMut.mutateAsync({
+        language: (local?.automation_language as 'ta' | 'en' | 'hi') ?? 'ta',
+        niche: niche.trim() || undefined,
+        count: 12,
+      });
+      setGeneratedTopics(result.topics);
+      // Pre-select all so the common case is "add all"
+      setSelectedGenerated(new Set(result.topics.map((_, i) => i)));
+    } catch (e) {
+      toast.error('Topic generation failed', e instanceof Error ? e.message : undefined);
+    }
+  }
+
+  async function handleAddSelectedGenerated() {
+    const picked = generatedTopics.filter((_, i) => selectedGenerated.has(i));
+    if (picked.length === 0) return;
+    try {
+      const result = await addMut.mutateAsync(picked);
+      toast.success(`Added ${result.added} topic${result.added === 1 ? '' : 's'}`);
+      setGeneratedTopics([]);
+      setSelectedGenerated(new Set());
+      setNiche('');
+    } catch (e) {
+      toast.error('Add failed', e instanceof Error ? e.message : undefined);
+    }
+  }
+
+  function toggleGenerated(i: number) {
+    setSelectedGenerated((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
 
   // Local mirror so users can edit settings without thrashing the network
   const [local, setLocal] = useState<AutomationSettings | null>(null);
@@ -383,12 +419,130 @@ export default function AutomationPage() {
             </View>
           </Card.Header>
           <Card.Body className="gap-4">
+            {/* AI topic generator */}
+            <View
+              className="rounded-xl p-4"
+              style={{
+                backgroundColor: 'rgba(229,57,53,0.04)',
+                borderWidth: 1,
+                borderColor: 'rgba(229,57,53,0.18)',
+              }}
+            >
+              <View className="flex-row items-center gap-2 mb-2">
+                <Sparkles size={14} color="#E53935" />
+                <Text className="text-[12px] font-bold uppercase tracking-wide text-brand">
+                  Generate with AI
+                </Text>
+              </View>
+              <Text className="text-[12px] text-ink-secondary mb-3 leading-relaxed">
+                Perplexity Sonar searches the live web and writes 12 trending news headlines in your
+                automation language. Pick the ones you like and add them in one click.
+              </Text>
+              <View className={isMobile ? 'gap-2' : 'flex-row gap-2'}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    value={niche}
+                    onChangeText={setNiche}
+                    placeholder="Optional niche (e.g. Tamil cinema, IPL, tech)"
+                  />
+                </View>
+                <Button
+                  leftIcon={<Sparkles size={12} color="#fff" />}
+                  onPress={handleGenerateTopics}
+                  loading={generateMut.isPending}
+                >
+                  Generate 12 topics
+                </Button>
+              </View>
+
+              {generatedTopics.length > 0 ? (
+                <View className="mt-4">
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wide">
+                      {selectedGenerated.size} of {generatedTopics.length} selected
+                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <Pressable
+                        onPress={() =>
+                          setSelectedGenerated(new Set(generatedTopics.map((_, i) => i)))
+                        }
+                      >
+                        <Text className="text-[11px] text-brand font-semibold">Select all</Text>
+                      </Pressable>
+                      <Text className="text-ink-faint">·</Text>
+                      <Pressable onPress={() => setSelectedGenerated(new Set())}>
+                        <Text className="text-[11px] text-ink-muted">Clear</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View
+                    className="rounded-lg overflow-hidden"
+                    style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E4E7' }}
+                  >
+                    {generatedTopics.map((t, i) => {
+                      const selected = selectedGenerated.has(i);
+                      return (
+                        <Pressable
+                          key={i}
+                          onPress={() => toggleGenerated(i)}
+                          className="flex-row items-center px-3 py-2.5"
+                          style={{
+                            borderBottomWidth: i < generatedTopics.length - 1 ? 1 : 0,
+                            borderBottomColor: '#E4E4E7',
+                            backgroundColor: selected ? 'rgba(229,57,53,0.04)' : '#FFFFFF',
+                          }}
+                        >
+                          <View
+                            className="items-center justify-center rounded-md mr-3"
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderWidth: 1.5,
+                              borderColor: selected ? '#E53935' : '#94A3B8',
+                              backgroundColor: selected ? '#E53935' : 'transparent',
+                            }}
+                          >
+                            {selected ? <CheckCircle2 size={11} color="#fff" /> : null}
+                          </View>
+                          <Text className="flex-1 text-[13px] text-ink leading-relaxed">{t}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View className="flex-row justify-end gap-2 mt-3">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => {
+                        setGeneratedTopics([]);
+                        setSelectedGenerated(new Set());
+                      }}
+                    >
+                      Discard
+                    </Button>
+                    <Button
+                      size="sm"
+                      leftIcon={<Plus size={12} color="#fff" />}
+                      onPress={handleAddSelectedGenerated}
+                      loading={addMut.isPending}
+                      disabled={selectedGenerated.size === 0}
+                    >
+                      Add {selectedGenerated.size > 0 ? `${selectedGenerated.size} ` : ''}to queue
+                    </Button>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Manual add (paste your own topics) */}
             <View>
               <Text className="text-[12px] font-semibold text-ink-secondary mb-1.5 uppercase tracking-wide">
-                Add topics (one per line)
+                Or add your own (one per line)
               </Text>
               <Textarea
-                rows={6}
+                rows={5}
                 value={topicsInput}
                 onChangeText={setTopicsInput}
                 placeholder={
@@ -404,7 +558,8 @@ export default function AutomationPage() {
                 </Text>
                 <Button
                   size="sm"
-                  leftIcon={<Plus size={12} color="#fff" />}
+                  variant="secondary"
+                  leftIcon={<Plus size={12} color="#475569" />}
                   onPress={handleAddTopics}
                   loading={addMut.isPending}
                   disabled={topicsInput.trim().length === 0}
@@ -596,6 +751,27 @@ function DailyProgress({
 
 function AddTimePicker({ onAdd }: { onAdd: (t: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [hour, setHour] = useState('09');
+  const [minute, setMinute] = useState('00');
+
+  function handleSave() {
+    const h = parseInt(hour, 10);
+    const m = parseInt(minute, 10);
+    if (Number.isNaN(h) || h < 0 || h > 23) {
+      toast.error('Invalid hour', '0–23 only');
+      return;
+    }
+    if (Number.isNaN(m) || m < 0 || m > 59) {
+      toast.error('Invalid minute', '0–59 only');
+      return;
+    }
+    const t = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    onAdd(t);
+    setOpen(false);
+    setHour('09');
+    setMinute('00');
+  }
+
   if (!open) {
     return (
       <Pressable
@@ -608,32 +784,71 @@ function AddTimePicker({ onAdd }: { onAdd: (t: string) => void }) {
       </Pressable>
     );
   }
+
   return (
     <View
       style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: '#E4E4E7',
         borderRadius: 8,
-        padding: 8,
-        maxHeight: 240,
-        width: 140,
+        padding: 6,
       }}
     >
-      <ScrollView style={{ maxHeight: 220 }}>
-        {TIME_OPTIONS.map((t) => (
-          <Pressable
-            key={t}
-            onPress={() => {
-              onAdd(t);
-              setOpen(false);
-            }}
-            className="px-2 py-1.5 rounded hover:bg-surface-raised"
-          >
-            <Text className="text-[12px] font-mono text-ink-secondary">{t}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <TextInput
+        value={hour}
+        onChangeText={(v) => setHour(v.replace(/[^0-9]/g, '').slice(0, 2))}
+        placeholder="HH"
+        keyboardType="number-pad"
+        maxLength={2}
+        style={{
+          width: 36,
+          textAlign: 'center',
+          fontSize: 13,
+          fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+          color: '#0F172A',
+          paddingVertical: 4,
+          backgroundColor: '#F4F4F5',
+          borderRadius: 4,
+        }}
+        onSubmitEditing={handleSave}
+        autoFocus
+      />
+      <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>:</Text>
+      <TextInput
+        value={minute}
+        onChangeText={(v) => setMinute(v.replace(/[^0-9]/g, '').slice(0, 2))}
+        placeholder="MM"
+        keyboardType="number-pad"
+        maxLength={2}
+        style={{
+          width: 36,
+          textAlign: 'center',
+          fontSize: 13,
+          fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+          color: '#0F172A',
+          paddingVertical: 4,
+          backgroundColor: '#F4F4F5',
+          borderRadius: 4,
+        }}
+        onSubmitEditing={handleSave}
+      />
+      <Pressable
+        onPress={handleSave}
+        className="rounded-md px-2 py-1.5"
+        style={{ backgroundColor: '#E53935' }}
+      >
+        <Text className="text-[11px] font-semibold text-white">Add</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => setOpen(false)}
+        className="rounded-md px-1.5 py-1.5"
+      >
+        <Text className="text-[11px] text-ink-muted">Cancel</Text>
+      </Pressable>
     </View>
   );
 }

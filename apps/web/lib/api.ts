@@ -385,4 +385,17 @@ export const api = {
     });
     await parseResponse(res);
   },
+
+  async generateTopicSuggestions(args: {
+    language?: 'ta' | 'en' | 'hi';
+    niche?: string;
+    count?: number;
+  }): Promise<{ topics: string[] }> {
+    const res = await fetch(`${BASE_URL}/api/automation/generate-topics`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse(res);
+  },
 };

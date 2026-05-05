@@ -151,6 +151,85 @@ export async function callGeminiScript(args: {
   return JSON.parse(content) as ScriptOutput;
 }
 
+/**
+ * Use Perplexity Sonar to surface real, currently-trending news topics.
+ * Returns a list of headline-style strings the user can drop into the
+ * auto-publish queue. Topics are written in the requested language.
+ */
+export async function generateTopicSuggestions(args: {
+  language: ProjectLanguage;
+  niche?: string;
+  count?: number;
+}): Promise<string[]> {
+  const apiKey = await requireSecret('OPENROUTER_API_KEY');
+  const langName = LANG_NAME[args.language];
+  const count = Math.max(3, Math.min(args.count ?? 12, 20));
+
+  const niche = args.niche?.trim();
+  const focus = niche ? ` focused on "${niche}"` : ' across general news, politics, tech, sports, entertainment, and India local';
+
+  const systemPrompt = `You are a news editor helping a creator stock their content queue.
+Search the live web for what's trending RIGHT NOW${focus}.
+
+Return a JSON object with this exact shape:
+{
+  "topics": [
+    "Concise headline #1, in ${langName}",
+    "Concise headline #2, in ${langName}",
+    ...
+  ]
+}
+
+Rules:
+- Exactly ${count} topics.
+- Each topic = a single short news headline (8-15 words). Not a question, not "What is X" — declarative.
+- Written in ${langName}. Native script, no transliteration.
+- Verifiable, currently-trending stories. No speculation.
+- No duplicates. No numbering. No quotes inside the strings.
+- Output ONLY the JSON object. No preamble, no markdown.`;
+
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.OPENROUTER_REFERER ?? 'http://localhost:3000',
+      'X-Title': process.env.OPENROUTER_TITLE ?? 'Newsflow Studio',
+    },
+    body: JSON.stringify({
+      model: 'perplexity/sonar-pro-search',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: niche ? `Trending topics in ${niche}` : 'Trending news topics' },
+      ],
+      temperature: 0.5,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`generate-topics call failed: ${res.status} ${errText}`);
+  }
+
+  const json = (await res.json()) as { choices: { message: { content: string } }[] };
+  const content = json.choices[0]?.message.content?.trim();
+  if (!content) throw new Error('generate-topics returned empty content');
+
+  let parsed: { topics?: unknown };
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('generate-topics returned non-JSON: ' + content.slice(0, 200));
+  }
+
+  const topics = Array.isArray(parsed.topics)
+    ? parsed.topics.filter((t): t is string => typeof t === 'string' && t.trim().length >= 3)
+    : [];
+  if (topics.length === 0) throw new Error('generate-topics returned no usable topics');
+  return topics.map((t) => t.trim()).slice(0, count);
+}
+
 export async function callPerplexityResearch(args: {
   topic: string;
   extraContext?: string;

@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
 import { getServiceClient } from '../services/supabase.js';
+import { generateTopicSuggestions } from '../services/openrouter.js';
+import type { ProjectLanguage } from '@newsflow/shared';
 
 export const automationRouter = Router();
 automationRouter.use(requireAuth);
@@ -193,4 +195,31 @@ automationRouter.delete('/topics', async (req: Request, res: Response) => {
     .eq('used', false);
   if (error) throw error;
   res.status(204).end();
+});
+
+// AI topic suggestions — Perplexity Sonar grounded in live web search.
+automationRouter.post('/generate-topics', async (req: Request, res: Response) => {
+  const body = req.body as {
+    language?: ProjectLanguage;
+    niche?: string;
+    count?: number;
+  };
+
+  const language = body.language ?? 'ta';
+  if (language !== 'ta' && language !== 'en' && language !== 'hi') {
+    res.status(400).json({ error: 'language must be ta, en, or hi' });
+    return;
+  }
+
+  try {
+    const topics = await generateTopicSuggestions({
+      language,
+      niche: body.niche,
+      count: body.count,
+    });
+    res.json({ topics });
+  } catch (e) {
+    console.error('[automation] generate-topics failed:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'generation failed' });
+  }
 });
