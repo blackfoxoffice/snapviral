@@ -70,8 +70,24 @@ export default function Settings() {
       window.history.replaceState({}, '', window.location.pathname);
       setTab('branding');
     }
-    if (params.get('yt_error') === '1') {
-      toast.error('YouTube connection failed');
+    const ytError = params.get('yt_error');
+    if (ytError) {
+      const detail = params.get('detail') ?? '';
+      let title = 'YouTube connection failed';
+      let body: string | undefined;
+      if (ytError === 'no_channel') {
+        title = 'No YouTube channel on this account';
+        body =
+          'The Google account you authorized doesn\'t have a YouTube channel. Visit youtube.com → click your profile → "Create a channel", then try again.';
+      } else if (ytError === 'invalid_grant' || ytError === 'token_exchange') {
+        title = 'Could not exchange the OAuth code';
+        body = detail || 'Try connecting again. If it keeps failing, your Google OAuth client may have a misconfigured redirect URI.';
+      } else if (ytError === '1' || ytError === 'unknown') {
+        body = detail || undefined;
+      } else {
+        body = detail || undefined;
+      }
+      toast.error(title, body);
       window.history.replaceState({}, '', window.location.pathname);
       setTab('branding');
     }
