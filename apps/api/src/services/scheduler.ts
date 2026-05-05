@@ -3,14 +3,15 @@ import { getValidAccessToken, uploadVideoToYouTube } from './youtube.js';
 import { runPipeline } from '../pipeline/runner.js';
 
 const POLL_INTERVAL_MS = 60_000;
-const AUTOMATION_TICK_MS = 5 * 60_000; // 5 min — auto-publish slots have minute granularity at most
+// Per-topic schedule has minute granularity, so check every minute too.
+const AUTOMATION_TICK_MS = 60_000;
 
 export function startScheduler() {
   console.log('[scheduler] YouTube auto-publish scheduler started (polls every 60s)');
   setInterval(processScheduledPublishes, POLL_INTERVAL_MS);
   processScheduledPublishes();
 
-  console.log('[scheduler] Automation worker started (ticks every 5 min)');
+  console.log('[scheduler] Automation worker started (ticks every 60s)');
   setInterval(processAutomationQueue, AUTOMATION_TICK_MS);
   // Don't auto-run on boot — wait one tick so any in-flight deploys settle
 }
@@ -109,8 +110,6 @@ async function publishScheduledVideo(project: {
 //    runner sets yt_scheduled_at on completion so the existing publish
 //    flow above handles upload to YouTube.
 // =====================================================================
-const SLOT_WINDOW_MIN = 5; // a slot is "active" if scheduler runs within +/- SLOT_WINDOW_MIN
-
 interface AutomationProfile {
   id: string;
   plan: string;
@@ -129,78 +128,54 @@ interface AutomationProfile {
 async function processAutomationQueue() {
   const supa = getServiceClient();
 
-  // Pull users who have automation on AND a YouTube channel connected.
-  // Join with plan_automation_limits to get the daily cap.
-  const { data: users, error } = await supa
-    .from('plan_automation_limits')
-    .select('user_id, plan, daily_video_limit, used_today, auto_publish_enabled');
-  if (error) {
-    console.error('[automation] Failed to query candidates:', error.message);
+  // Find users who have at least one DUE topic right now (scheduled_at <= now,
+  // not yet used). These are the only candidates worth processing.
+  const { data: dueRows, error: dueErr } = await supa
+    .from('topic_queue')
+    .select('user_id')
+    .eq('used', false)
+    .not('scheduled_at', 'is', null)
+    .lte('scheduled_at', new Date().toISOString());
+  if (dueErr) {
+    console.error('[automation] failed to query due topics:', dueErr.message);
     return;
   }
+  if (!dueRows || dueRows.length === 0) return;
 
-  const eligible = (users ?? []).filter(
-    (u) => u.auto_publish_enabled && u.daily_video_limit > 0 && u.used_today < u.daily_video_limit,
-  );
-  if (eligible.length === 0) return;
+  const dueUserIds = Array.from(new Set(dueRows.map((r) => r.user_id)));
 
-  // Hydrate the per-user automation settings + verify YouTube is connected
-  const ids = eligible.map((u) => u.user_id);
+  // Hydrate quota + automation settings for those users
+  const { data: limits } = await supa
+    .from('plan_automation_limits')
+    .select('user_id, plan, daily_video_limit, used_today, auto_publish_enabled')
+    .in('user_id', dueUserIds);
   const { data: profiles } = await supa
     .from('profiles')
     .select(
       'id, plan, auto_publish_enabled, publish_times, automation_language, automation_image_style, automation_voice_id, automation_duration_seconds, automation_input_mode, automation_privacy, yt_refresh_token',
     )
-    .in('id', ids);
+    .in('id', dueUserIds);
 
-  if (!profiles) return;
+  if (!limits || !profiles) return;
 
   for (const p of profiles) {
-    const limits = eligible.find((u) => u.user_id === p.id);
-    if (!limits) continue;
-    if (!p.yt_refresh_token) continue; // YouTube must be connected
-
-    if (!isPublishSlotNow(p.publish_times)) continue;
+    const lim = limits.find((u) => u.user_id === p.id);
+    if (!lim) continue;
+    if (!lim.auto_publish_enabled) continue;
+    if (lim.daily_video_limit <= 0) continue;
+    if (lim.used_today >= lim.daily_video_limit) continue;
+    if (!p.yt_refresh_token) continue;
 
     try {
       await tryGenerateNextForUser({
         ...(p as Omit<AutomationProfile, 'daily_video_limit' | 'used_today'>),
-        daily_video_limit: limits.daily_video_limit,
-        used_today: limits.used_today,
+        daily_video_limit: lim.daily_video_limit,
+        used_today: lim.used_today,
       });
     } catch (e) {
       console.error(`[automation] User ${p.id} failed:`, e instanceof Error ? e.message : e);
     }
   }
-}
-
-/**
- * Return true if NOW (in IST) is within ±SLOT_WINDOW_MIN minutes of any
- * configured publish time. We compare HH:MM in Asia/Kolkata.
- */
-function isPublishSlotNow(publishTimes: string[] | null | undefined): boolean {
-  if (!publishTimes || publishTimes.length === 0) return false;
-  const fmt = new Intl.DateTimeFormat('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(new Date());
-  const h = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
-  const m = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
-  const nowMin = h * 60 + m;
-
-  for (const t of publishTimes) {
-    const [hh, mm] = t.split(':').map((s) => parseInt(s, 10));
-    if (Number.isNaN(hh) || Number.isNaN(mm)) continue;
-    const slotMin = hh! * 60 + mm!;
-    const delta = Math.abs(nowMin - slotMin);
-    // Wrap-around: 23:58 vs 00:02 -> delta is 4, not 1436
-    const wrapDelta = Math.min(delta, 1440 - delta);
-    if (wrapDelta <= SLOT_WINDOW_MIN) return true;
-  }
-  return false;
 }
 
 async function tryGenerateNextForUser(profile: AutomationProfile) {

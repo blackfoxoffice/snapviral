@@ -305,7 +305,19 @@ export function useUpdateAutomationSettings() {
 export function useAddTopics() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (topics: string[]) => api.addTopics(topics),
+    mutationFn: (topics: Array<string | { topic: string; scheduled_at?: string }>) =>
+      api.addTopics(topics),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.automationStatus });
+    },
+  });
+}
+
+export function useUpdateTopic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; topic?: string; scheduled_at?: string | null }) =>
+      api.updateTopic(args.id, { topic: args.topic, scheduled_at: args.scheduled_at }),
     onSuccess() {
       qc.invalidateQueries({ queryKey: qk.automationStatus });
     },

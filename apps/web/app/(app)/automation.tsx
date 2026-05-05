@@ -42,6 +42,7 @@ import {
   useAutomationStatus,
   useUpdateAutomationSettings,
   useAddTopics,
+  useUpdateTopic,
   useDeleteTopic,
   useClearTopics,
   useGenerateTopicSuggestions,
@@ -78,6 +79,7 @@ export default function AutomationPage() {
   const { data: ytStatus } = useYouTubeStatus();
   const updateMut = useUpdateAutomationSettings();
   const addMut = useAddTopics();
+  const updateTopicMut = useUpdateTopic();
   const deleteMut = useDeleteTopic();
   const clearMut = useClearTopics();
   const generateMut = useGenerateTopicSuggestions();
@@ -578,6 +580,17 @@ export default function AutomationPage() {
                     topic={t}
                     isLast={i === unused.length - 1 && used.length === 0}
                     onDelete={() => deleteMut.mutate(t.id)}
+                    onReschedule={(id, iso) =>
+                      updateTopicMut.mutate(
+                        { id, scheduled_at: iso },
+                        {
+                          onSuccess: () => toast.success('Rescheduled'),
+                          onError: (e) =>
+                            toast.error('Reschedule failed', e instanceof Error ? e.message : undefined),
+                        },
+                      )
+                    }
+                    rescheduling={updateTopicMut.isPending}
                   />
                 ))}
 
@@ -605,6 +618,10 @@ export default function AutomationPage() {
                     topic={t}
                     isLast={i === Math.min(used.length, 20) - 1}
                     onDelete={() => deleteMut.mutate(t.id)}
+                    onReschedule={() => {
+                      // Already used — no-op
+                    }}
+                    rescheduling={false}
                   />
                 ))}
               </View>
@@ -853,19 +870,49 @@ function AddTimePicker({ onAdd }: { onAdd: (t: string) => void }) {
   );
 }
 
+function formatSchedule(iso: string | null): { label: string; relative: 'past' | 'soon' | 'future' } {
+  if (!iso) return { label: 'Not scheduled', relative: 'future' };
+  const d = new Date(iso);
+  const now = Date.now();
+  const diffMs = d.getTime() - now;
+  const isToday = new Date().toDateString() === d.toDateString();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = tomorrow.toDateString() === d.toDateString();
+
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  let dayLabel: string;
+  if (isToday) dayLabel = 'Today';
+  else if (isTomorrow) dayLabel = 'Tomorrow';
+  else dayLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  const relative: 'past' | 'soon' | 'future' =
+    diffMs < 0 ? 'past' : diffMs < 60 * 60 * 1000 ? 'soon' : 'future';
+
+  return { label: `${dayLabel}, ${time}`, relative };
+}
+
 function TopicRow({
   topic,
   isLast,
   onDelete,
+  onReschedule,
+  rescheduling,
 }: {
   topic: TopicQueueItem;
   isLast: boolean;
   onDelete: () => void;
+  onReschedule: (id: string, newIso: string) => void;
+  rescheduling: boolean;
 }) {
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const sched = formatSchedule(topic.scheduled_at);
+  const accent =
+    sched.relative === 'past' ? '#EF4444' : sched.relative === 'soon' ? '#F59E0B' : '#64748B';
+
   return (
     <View
-      className="flex-row items-center px-4 py-3"
       style={{
         backgroundColor: topic.used ? '#FAFAFA' : '#FFFFFF',
         borderBottomWidth: isLast ? 0 : 1,
@@ -873,37 +920,190 @@ function TopicRow({
         opacity: topic.used ? 0.7 : 1,
       }}
     >
-      {topic.used ? (
-        <CheckCircle2 size={14} color="#00C853" style={{ marginRight: 8 }} />
-      ) : (
-        <Calendar size={14} color="#64748B" style={{ marginRight: 8 }} />
-      )}
-      <View className="flex-1">
-        <Text
-          className="text-[13px] text-ink"
-          numberOfLines={2}
-          style={{ textDecorationLine: topic.used ? 'line-through' : 'none' }}
-        >
-          {topic.topic}
-        </Text>
-        {topic.used_at ? (
-          <Text className="text-[10px] text-ink-subtle mt-0.5">
-            Used {new Date(topic.used_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+      <View className="flex-row items-center px-4 py-3">
+        {topic.used ? (
+          <CheckCircle2 size={14} color="#00C853" style={{ marginRight: 8 }} />
+        ) : (
+          <Calendar size={14} color={accent} style={{ marginRight: 8 }} />
+        )}
+        <View className="flex-1 mr-2">
+          <Text
+            className="text-[13px] text-ink"
+            numberOfLines={2}
+            style={{ textDecorationLine: topic.used ? 'line-through' : 'none' }}
+          >
+            {topic.topic}
           </Text>
+          {topic.used_at ? (
+            <Text className="text-[10px] text-ink-subtle mt-0.5">
+              Published{' '}
+              {new Date(topic.used_at).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </Text>
+          ) : (
+            <Pressable
+              onPress={() => setEditing(true)}
+              disabled={topic.used}
+              className="flex-row items-center gap-1 mt-0.5"
+            >
+              <Clock size={10} color={accent} />
+              <Text className="text-[10px] font-medium" style={{ color: accent }}>
+                {sched.label}
+              </Text>
+              <Text className="text-[10px] text-ink-subtle">· edit</Text>
+            </Pressable>
+          )}
+        </View>
+        {topic.project_id ? (
+          <Pressable
+            onPress={() => router.push(`/projects/${topic.project_id}` as any)}
+            className="rounded-md px-2 py-1 mr-1"
+            style={{ backgroundColor: '#F4F4F5' }}
+          >
+            <Text className="text-[10px] font-semibold text-ink-secondary">View project</Text>
+          </Pressable>
         ) : null}
-      </View>
-      {topic.project_id ? (
-        <Pressable
-          onPress={() => router.push(`/projects/${topic.project_id}` as any)}
-          className="rounded-md px-2 py-1"
-          style={{ backgroundColor: '#F4F4F5' }}
-        >
-          <Text className="text-[10px] font-semibold text-ink-secondary">View project</Text>
+        <Pressable onPress={onDelete} className="p-1.5">
+          <Trash2 size={12} color="#94A3B8" />
         </Pressable>
+      </View>
+      {editing ? (
+        <ScheduleEditor
+          currentIso={topic.scheduled_at}
+          onCancel={() => setEditing(false)}
+          loading={rescheduling}
+          onSave={(iso) => {
+            onReschedule(topic.id, iso);
+            setEditing(false);
+          }}
+        />
       ) : null}
-      <Pressable onPress={onDelete} className="p-1.5 ml-2">
-        <Trash2 size={12} color="#94A3B8" />
+    </View>
+  );
+}
+
+function ScheduleEditor({
+  currentIso,
+  onCancel,
+  onSave,
+  loading,
+}: {
+  currentIso: string | null;
+  onCancel: () => void;
+  onSave: (iso: string) => void;
+  loading: boolean;
+}) {
+  // Pre-fill with current scheduled time, or "now + 5 min" if not set.
+  const initial = currentIso ? new Date(currentIso) : new Date(Date.now() + 5 * 60 * 1000);
+  const [date, setDate] = useState(toDateInputValue(initial));
+  const [time, setTime] = useState(toTimeInputValue(initial));
+
+  function handleSave() {
+    // Combine date YYYY-MM-DD + time HH:MM into a local Date, then ISO string
+    const parsed = new Date(`${date}T${time}`);
+    if (Number.isNaN(parsed.getTime())) {
+      toast.error('Invalid date/time');
+      return;
+    }
+    if (parsed.getTime() < Date.now() - 60_000) {
+      toast.error('Time must be in the future');
+      return;
+    }
+    onSave(parsed.toISOString());
+  }
+
+  // On web we can use real <input type="date"> / <input type="time"> by
+  // rendering them through a generic html element. RN's TextInput on web
+  // accepts the type via inputMode/keyboardType but native date/time pickers
+  // aren't there. For web specifically we use a tiny inline solution:
+  return (
+    <View
+      className="flex-row items-center gap-2 px-4 pb-3"
+      style={{ backgroundColor: '#F4F4F5', borderTopWidth: 1, borderTopColor: '#E4E4E7' }}
+    >
+      <View className="py-2 flex-row items-center gap-2 flex-1">
+        <DateInput value={date} onChange={setDate} />
+        <TimeInput value={time} onChange={setTime} />
+      </View>
+      <Pressable
+        onPress={handleSave}
+        disabled={loading}
+        className="rounded-md px-3 py-1.5"
+        style={{ backgroundColor: '#E53935', opacity: loading ? 0.6 : 1 }}
+      >
+        <Text className="text-[11px] font-semibold text-white">Save</Text>
+      </Pressable>
+      <Pressable onPress={onCancel} className="rounded-md px-2 py-1.5">
+        <Text className="text-[11px] text-ink-muted">Cancel</Text>
       </Pressable>
     </View>
   );
+}
+
+// Renders a real <input type="date"> on web, falls back to TextInput on native.
+function DateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  if (typeof document !== 'undefined') {
+    return (
+      <View>
+        <input
+          type="date"
+          value={value}
+          onChange={(e: any) => onChange(e.target.value)}
+          style={{
+            fontSize: 12,
+            padding: '6px 8px',
+            borderRadius: 6,
+            border: '1px solid #E4E4E7',
+            backgroundColor: '#FFFFFF',
+            color: '#0F172A',
+            fontFamily: 'inherit',
+          }}
+        />
+      </View>
+    );
+  }
+  return null;
+}
+
+function TimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  if (typeof document !== 'undefined') {
+    return (
+      <View>
+        <input
+          type="time"
+          value={value}
+          step={60}
+          onChange={(e: any) => onChange(e.target.value)}
+          style={{
+            fontSize: 12,
+            padding: '6px 8px',
+            borderRadius: 6,
+            border: '1px solid #E4E4E7',
+            backgroundColor: '#FFFFFF',
+            color: '#0F172A',
+            fontFamily: 'inherit',
+          }}
+        />
+      </View>
+    );
+  }
+  return null;
+}
+
+function toDateInputValue(d: Date): string {
+  // YYYY-MM-DD in local time
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function toTimeInputValue(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
 }

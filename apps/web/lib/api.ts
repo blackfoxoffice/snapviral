@@ -361,13 +361,27 @@ export const api = {
     return parseResponse(res);
   },
 
-  async addTopics(topics: string[]): Promise<{ added: number; topics: TopicQueueItem[] }> {
+  async addTopics(
+    topics: Array<string | { topic: string; scheduled_at?: string }>,
+  ): Promise<{ added: number; topics: TopicQueueItem[] }> {
     const res = await fetch(`${BASE_URL}/api/automation/topics`, {
       method: 'POST',
       headers: await authHeaders(),
       body: JSON.stringify({ topics }),
     });
     return parseResponse(res);
+  },
+
+  async updateTopic(
+    id: string,
+    args: { topic?: string; scheduled_at?: string | null },
+  ): Promise<TopicQueueItem> {
+    const res = await fetch(`${BASE_URL}/api/automation/topics/${id}`, {
+      method: 'PATCH',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse<TopicQueueItem>(res);
   },
 
   async deleteTopic(id: string): Promise<void> {
