@@ -112,7 +112,8 @@ export default function AutomationPage() {
     );
   }
 
-  const isPaid = status.plan !== 'free';
+  // Admin users get daily_video_limit=999 from the view, so this also covers them.
+  const isPaid = status.daily_video_limit > 0;
   const ytConnected = ytStatus?.connected ?? false;
   const queue = status.queue ?? [];
   const unused = queue.filter((q) => !q.used);

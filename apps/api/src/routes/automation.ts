@@ -102,14 +102,15 @@ automationRouter.put('/settings', async (req: Request, res: Response) => {
     }
   }
 
-  // Block enabling on free plan
+  // Block enabling on free plan (admins are exempt — they get unlimited)
   if (body.auto_publish_enabled) {
     const { data: profile } = await supa
       .from('profiles')
-      .select('plan')
+      .select('plan, is_admin')
       .eq('id', user.id)
       .single();
-    if ((profile as { plan?: string } | null)?.plan === 'free') {
+    const p = profile as { plan?: string; is_admin?: boolean } | null;
+    if (p?.plan === 'free' && !p?.is_admin) {
       res.status(402).json({
         error: 'plan_required',
         message: 'Auto-publish requires a paid plan. Upgrade on /billing.',
