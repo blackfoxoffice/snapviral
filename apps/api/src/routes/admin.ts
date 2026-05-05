@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
 import { getServiceClient } from '../services/supabase.js';
 import { invalidateSecretCache } from '../services/secrets.js';
+import { createProductsIfMissing } from '../services/billing.js';
 
 export const adminRouter = Router();
 
@@ -126,6 +127,26 @@ adminRouter.delete('/secrets/:key', async (req: Request, res: Response) => {
   }
   invalidateSecretCache(key);
   res.status(204).end();
+});
+
+// ===== Dodo Payments setup (one-shot) =====
+adminRouter.post('/setup-dodo-products', async (_req: Request, res: Response) => {
+  try {
+    const result = await createProductsIfMissing();
+    res.json({
+      ok: true,
+      created: result.created,
+      existed: result.existed,
+      next_steps: [
+        'Copy the env var lines printed above to Railway',
+        'Restart the API service',
+        'Test checkout from /billing page',
+      ],
+    });
+  } catch (e) {
+    console.error('[admin] setup-dodo-products failed:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'setup failed' });
+  }
 });
 
 // ===== Audit log =====
