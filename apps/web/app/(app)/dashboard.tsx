@@ -105,7 +105,7 @@ export default function Dashboard() {
             {/* Hero metric strip */}
             <View
               className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: '#161616', borderWidth: 1, borderColor: '#222' }}
+              style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E4E7' }}
             >
               <View className={`${isMobile ? 'gap-0' : 'flex-row'}`}>
                 <HeroMetric
@@ -168,7 +168,7 @@ export default function Dashboard() {
                 </View>
                 <View
                   className="rounded-xl overflow-hidden"
-                  style={{ borderWidth: 1, borderColor: '#2A2A2A' }}
+                  style={{ borderWidth: 1, borderColor: '#E4E4E7' }}
                 >
                   {recent.map((p, i) => (
                     <ProjectRow key={p.id} project={p} last={i === recent.length - 1} />
@@ -181,7 +181,7 @@ export default function Dashboard() {
                 {/* Pipeline breakdown */}
                 <View
                   className="rounded-xl p-4"
-                  style={{ backgroundColor: '#161616', borderWidth: 1, borderColor: '#222' }}
+                  style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E4E7' }}
                 >
                   <Text className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wider mb-3">
                     Pipeline
@@ -197,7 +197,7 @@ export default function Dashboard() {
                 {stats && Object.keys(stats.by_language).length > 0 ? (
                   <View
                     className="rounded-xl p-4"
-                    style={{ backgroundColor: '#161616', borderWidth: 1, borderColor: '#222' }}
+                    style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E4E7' }}
                   >
                     <Text className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wider mb-3">
                       Languages
@@ -231,7 +231,7 @@ export default function Dashboard() {
                   <Pressable
                     onPress={() => router.push('/library')}
                     className="flex-row items-center gap-3 rounded-xl px-4 py-3 active:opacity-80"
-                    style={{ backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#2A2A2A' }}
+                    style={{ backgroundColor: '#F4F4F5', borderWidth: 1, borderColor: '#E4E4E7' }}
                   >
                     <Play size={14} color="#78909C" />
                     <Text className="text-[13px] text-ink-secondary flex-1">Browse library</Text>
@@ -280,7 +280,7 @@ function HeroMetric({
         paddingHorizontal: isMobile ? 16 : 20,
         borderLeftWidth: isMobile || first ? 0 : 1,
         borderTopWidth: !isMobile || first ? 0 : 1,
-        borderColor: '#222',
+        borderColor: '#E4E4E7',
       }}
     >
       <Text
@@ -303,7 +303,7 @@ function ProjectRow({ project: p, last }: { project: Project; last: boolean }) {
     <Pressable
       onPress={() => router.push(`/projects/${p.id}`)}
       className="flex-row items-center bg-surface-card px-4 py-3 active:bg-surface-raised"
-      style={last ? {} : { borderBottomWidth: 1, borderBottomColor: '#2A2A2A' }}
+      style={last ? {} : { borderBottomWidth: 1, borderBottomColor: '#E4E4E7' }}
     >
       <View className="flex-1 mr-3">
         <View className="flex-row items-center gap-2">

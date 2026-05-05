@@ -362,7 +362,7 @@ export function VideoPreview({ project }: Props) {
                     padding: '8px 12px',
                     borderRadius: 8,
                     border: '1px solid #263238',
-                    backgroundColor: '#1E1E1E',
+                    backgroundColor: '#F4F4F5',
                     color: '#F5F5F5',
                     fontSize: 13,
                     fontFamily: 'inherit',

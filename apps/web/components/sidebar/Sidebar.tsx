@@ -12,6 +12,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Shield,
+  Youtube,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
@@ -30,6 +31,7 @@ const NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', Icon: LayoutGrid },
   { href: '/projects/new', label: 'New Project', Icon: Plus },
   { href: '/library', label: 'Library', Icon: Library },
+  { href: '/youtube', label: 'YouTube', Icon: Youtube },
   { href: '/voiceover', label: 'Voiceover Lab', Icon: Mic, disabled: true },
   { href: '/thumbnails', label: 'Thumbnails', Icon: ImagePlus, disabled: true },
   { href: '/analytics', label: 'Analytics', Icon: TrendingUp, disabled: true },

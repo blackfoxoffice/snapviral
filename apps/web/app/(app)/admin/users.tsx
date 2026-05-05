@@ -62,7 +62,7 @@ export default function AdminUsers() {
                 <View
                   key={u.id}
                   className="flex-row items-center px-5 py-3"
-                  style={i < users.length - 1 ? { borderBottomWidth: 1, borderBottomColor: '#2A2A2A' } : {}}
+                  style={i < users.length - 1 ? { borderBottomWidth: 1, borderBottomColor: '#E4E4E7' } : {}}
                 >
                   <Text className="flex-[3] text-[13px] text-ink" numberOfLines={1}>
                     {u.email}

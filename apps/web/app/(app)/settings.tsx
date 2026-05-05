@@ -1,20 +1,17 @@
 import { View, Text, ScrollView, Pressable, useWindowDimensions, Image } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
-import { LogOut, Upload, Trash2, Youtube, Instagram, Facebook, Twitter, Link2, CheckCircle2, ExternalLink } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { LogOut, Upload, Trash2, Youtube, Instagram, Facebook, Twitter, Link2 } from 'lucide-react-native';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Tabs } from '../../components/ui/Tabs';
-import { Badge } from '../../components/ui/Badge';
 import { toast } from '../../components/ui/Toast';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import {
   useLogo, useUploadLogo, useDeleteLogo,
   useSocialHandles, useUpdateSocialHandles,
-  useYouTubeStatus, useDisconnectYouTube,
 } from '../../lib/queries';
-import { api } from '../../lib/api';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -34,10 +31,6 @@ export default function Settings() {
 
   const { data: socialData } = useSocialHandles();
   const updateSocial = useUpdateSocialHandles();
-
-  const { data: ytStatus, refetch: refetchYt } = useYouTubeStatus();
-  const disconnectYt = useDisconnectYouTube();
-  const [ytConnecting, setYtConnecting] = useState(false);
 
   const [socials, setSocials] = useState({
     youtube: '',
@@ -61,39 +54,7 @@ export default function Settings() {
     }
   }, [socialData, socialsLoaded]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('yt_connected') === '1') {
-      toast.success('YouTube connected!');
-      refetchYt();
-      window.history.replaceState({}, '', window.location.pathname);
-      setTab('branding');
-    }
-    const ytError = params.get('yt_error');
-    if (ytError) {
-      const detail = params.get('detail') ?? '';
-      let title = 'YouTube connection failed';
-      let body: string | undefined;
-      if (ytError === 'no_channel') {
-        title = 'No YouTube channel on this account';
-        body =
-          'The Google account you authorized doesn\'t have a YouTube channel. Visit youtube.com → click your profile → "Create a channel", then try again.';
-      } else if (ytError === 'invalid_grant' || ytError === 'token_exchange') {
-        title = 'Could not exchange the OAuth code';
-        body = detail || 'Try connecting again. If it keeps failing, your Google OAuth client may have a misconfigured redirect URI.';
-      } else if (ytError === '1' || ytError === 'unknown') {
-        body = detail || undefined;
-      } else {
-        body = detail || undefined;
-      }
-      toast.error(title, body);
-      window.history.replaceState({}, '', window.location.pathname);
-      setTab('branding');
-    }
-  }, [refetchYt]);
-
-  async function handlePasswordUpdate() {
+async function handlePasswordUpdate() {
     if (newPassword.length < 8) {
       toast.error('Password must be at least 8 characters');
       return;
@@ -157,28 +118,6 @@ export default function Settings() {
       toast.success('Social handles saved');
     } catch (e) {
       toast.error('Failed to save', e instanceof Error ? e.message : undefined);
-    }
-  }
-
-  async function handleConnectYouTube() {
-    setYtConnecting(true);
-    try {
-      const url = await api.getYouTubeAuthUrl();
-      if (typeof window !== 'undefined') {
-        window.location.href = url;
-      }
-    } catch (e) {
-      toast.error('Could not start YouTube connection', e instanceof Error ? e.message : undefined);
-      setYtConnecting(false);
-    }
-  }
-
-  async function handleDisconnectYouTube() {
-    try {
-      await disconnectYt.mutateAsync();
-      toast.success('YouTube disconnected');
-    } catch (e) {
-      toast.error('Failed to disconnect', e instanceof Error ? e.message : undefined);
     }
   }
 
@@ -261,55 +200,6 @@ export default function Settings() {
                     <Text className="text-[13px] font-semibold text-ink mt-2">Upload your logo</Text>
                     <Text className="text-[11px] text-ink-muted mt-0.5">PNG, JPG, SVG or WebP — max 2 MB</Text>
                     {uploadLogo.isPending ? <Text className="text-[11px] text-ink-muted mt-1">Uploading...</Text> : null}
-                  </Pressable>
-                )}
-              </Card.Body>
-            </Card>
-
-            <Card>
-              <Card.Header>
-                <View className="flex-row items-center justify-between">
-                  <View>
-                    <Text className="text-[14px] font-semibold text-ink">YouTube Channel</Text>
-                    <Text className="text-[12px] text-ink-muted mt-0.5">
-                      Connect your YouTube to auto-publish videos directly.
-                    </Text>
-                  </View>
-                  {ytStatus?.connected ? <Badge variant="success">Connected</Badge> : null}
-                </View>
-              </Card.Header>
-              <Card.Body className="gap-3">
-                {ytStatus?.connected ? (
-                  <View className="flex-row items-center gap-3 rounded-lg bg-accent-soft border border-accent-border p-3">
-                    <View className="h-10 w-10 rounded-full bg-brand items-center justify-center">
-                      <Youtube size={18} color="#fff" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-[13px] font-semibold text-ink">{ytStatus.channel_name}</Text>
-                      <Text className="text-[11px] text-ink-muted">{ytStatus.channel_id}</Text>
-                    </View>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onPress={handleDisconnectYouTube}
-                      loading={disconnectYt.isPending}
-                    >
-                      Disconnect
-                    </Button>
-                  </View>
-                ) : (
-                  <Pressable
-                    onPress={handleConnectYouTube}
-                    disabled={ytConnecting}
-                    className="border-2 border-dashed border-surface-border rounded-xl p-6 items-center justify-center"
-                  >
-                    <Youtube size={24} color="#E53935" />
-                    <Text className="text-[13px] font-semibold text-ink mt-2">
-                      {ytConnecting ? 'Connecting...' : 'Connect YouTube Channel'}
-                    </Text>
-                    <Text className="text-[11px] text-ink-muted mt-0.5">
-                      Sign in with Google to enable auto-publishing
-                    </Text>
                   </Pressable>
                 )}
               </Card.Body>

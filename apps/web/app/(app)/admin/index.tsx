@@ -79,7 +79,7 @@ function Tile({
   return (
     <View
       className="rounded-xl border bg-surface-card p-4"
-      style={{ flexBasis: '47%', flexGrow: 1, minWidth: 160, borderColor: '#222' }}
+      style={{ flexBasis: '47%', flexGrow: 1, minWidth: 160, borderColor: '#E4E4E7' }}
     >
       <View className="flex-row items-center gap-2 mb-2">
         {icon}

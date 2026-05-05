@@ -50,7 +50,7 @@ youtubeRouter.get('/callback', async (req: Request, res: Response) => {
       })
       .eq('id', userId);
 
-    res.redirect(`${webUrl}/settings?yt_connected=1`);
+    res.redirect(`${webUrl}/youtube?yt_connected=1`);
   } catch (e) {
     console.error('[youtube] OAuth callback error:', e);
     const message = e instanceof Error ? e.message : 'unknown error';
@@ -58,7 +58,7 @@ youtubeRouter.get('/callback', async (req: Request, res: Response) => {
     if (/no youtube channel/i.test(message)) reason = 'no_channel';
     else if (/invalid_grant/i.test(message)) reason = 'invalid_grant';
     else if (/token exchange/i.test(message)) reason = 'token_exchange';
-    res.redirect(`${webUrl}/settings?yt_error=${reason}&detail=${encodeURIComponent(message.slice(0, 200))}`);
+    res.redirect(`${webUrl}/youtube?yt_error=${reason}&detail=${encodeURIComponent(message.slice(0, 200))}`);
   }
 });
 

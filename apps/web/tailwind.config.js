@@ -7,42 +7,45 @@ module.exports = {
       colors: {
         brand: {
           DEFAULT: '#E53935',
-          hover: '#C62828',
+          hover: '#D32F2F',
           dark: '#B71C1C',
-          soft: 'rgba(229,57,53,0.12)',
+          soft: 'rgba(229,57,53,0.10)',
         },
         accent: {
-          DEFAULT: '#00E676',
-          soft: 'rgba(0,230,118,0.10)',
-          border: 'rgba(0,230,118,0.25)',
-          muted: '#69F0AE',
+          DEFAULT: '#00C853',
+          soft: 'rgba(0,200,83,0.10)',
+          border: 'rgba(0,200,83,0.25)',
+          muted: '#43A047',
         },
+        // Ink (foreground / text) — slate scale on light bg
         ink: {
-          DEFAULT: '#F5F5F5',
-          secondary: '#B0BEC5',
-          muted: '#78909C',
-          subtle: '#546E7A',
-          faint: '#37474F',
+          DEFAULT: '#0F172A',     // primary text
+          secondary: '#334155',   // body / labels
+          muted: '#64748B',       // captions
+          subtle: '#94A3B8',      // metadata
+          faint: '#CBD5E1',       // dividers / borders inline
         },
+        // Surface (background) — neutral light scale
         surface: {
-          DEFAULT: '#121212',
-          raised: '#1E1E1E',
-          sunken: '#0A0A0A',
-          border: '#2A2A2A',
-          card: '#181818',
+          DEFAULT: '#FAFAFA',     // app background
+          raised: '#F4F4F5',      // hovered rows / inputs
+          sunken: '#FFFFFF',      // very subtle highlight (cards on grey)
+          border: '#E4E4E7',      // dividers / card borders
+          card: '#FFFFFF',        // card surfaces
         },
+        // Top nav / sidebar
         nav: {
-          DEFAULT: '#0A0A0A',
-          surface: '#1A1A1A',
-          border: '#2A2A2A',
-          muted: '#78909C',
-          active: '#FFFFFF',
+          DEFAULT: '#FFFFFF',
+          surface: '#F4F4F5',
+          border: '#E4E4E7',
+          muted: '#64748B',
+          active: '#0F172A',
         },
         state: {
-          success: { DEFAULT: '#00E676', soft: 'rgba(0,230,118,0.10)' },
-          warning: { DEFAULT: '#FFB300', soft: 'rgba(255,179,0,0.10)' },
+          success: { DEFAULT: '#00C853', soft: 'rgba(0,200,83,0.10)' },
+          warning: { DEFAULT: '#F59E0B', soft: 'rgba(245,158,11,0.10)' },
           error: { DEFAULT: '#EF4444', soft: 'rgba(239,68,68,0.10)' },
-          info: { DEFAULT: '#42A5F5', soft: 'rgba(66,165,245,0.10)' },
+          info: { DEFAULT: '#2563EB', soft: 'rgba(37,99,235,0.10)' },
         },
       },
       fontFamily: {
@@ -58,12 +61,12 @@ module.exports = {
         '2xl': '16px',
       },
       boxShadow: {
-        sm: '0 1px 2px 0 rgba(0,0,0,0.3)',
-        DEFAULT: '0 1px 3px 0 rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.3)',
-        md: '0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3)',
-        lg: '0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.3)',
-        overlay: '0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.4)',
-        glow: '0 0 20px rgba(229,57,53,0.15)',
+        sm: '0 1px 2px 0 rgba(15,23,42,0.04)',
+        DEFAULT: '0 1px 3px 0 rgba(15,23,42,0.06), 0 1px 2px -1px rgba(15,23,42,0.04)',
+        md: '0 4px 6px -1px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.04)',
+        lg: '0 10px 15px -3px rgba(15,23,42,0.08), 0 4px 6px -4px rgba(15,23,42,0.04)',
+        overlay: '0 20px 25px -5px rgba(15,23,42,0.10), 0 8px 10px -6px rgba(15,23,42,0.06)',
+        glow: '0 0 20px rgba(229,57,53,0.20)',
       },
     },
   },

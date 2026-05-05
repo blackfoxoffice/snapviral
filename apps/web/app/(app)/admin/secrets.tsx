@@ -107,7 +107,7 @@ export default function AdminSecrets() {
                 <View
                   key={s.key_name}
                   className="flex-row items-center px-5 py-3.5"
-                  style={i < secrets.length - 1 ? { borderBottomWidth: 1, borderBottomColor: '#2A2A2A' } : {}}
+                  style={i < secrets.length - 1 ? { borderBottomWidth: 1, borderBottomColor: '#E4E4E7' } : {}}
                 >
                   <View className="flex-1 mr-3">
                     <View className="flex-row items-center gap-2">

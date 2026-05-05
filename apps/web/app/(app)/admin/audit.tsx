@@ -59,7 +59,7 @@ export default function AdminAuditLog() {
                   <View
                     key={entry.id}
                     className="flex-row items-center px-5 py-3"
-                    style={i < log.length - 1 ? { borderBottomWidth: 1, borderBottomColor: '#2A2A2A' } : {}}
+                    style={i < log.length - 1 ? { borderBottomWidth: 1, borderBottomColor: '#E4E4E7' } : {}}
                   >
                     <View
                       className="items-center justify-center rounded-md mr-3"
