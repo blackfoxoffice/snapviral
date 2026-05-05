@@ -17,16 +17,21 @@ RUN corepack enable
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+# Copy workspace manifests, the shared package, the API package, and the root tsconfig
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
+# Install all workspace deps (incl. tsx for runtime TS execution)
 RUN pnpm install --frozen-lockfile || pnpm install
-RUN pnpm --filter @newsflow/api build
 
 ENV NODE_ENV=production
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
 ENV FFPROBE_PATH=/usr/bin/ffprobe
 
 EXPOSE 4000
-CMD ["node", "apps/api/dist/index.js"]
+
+# Run TypeScript directly with tsx — no build step. Avoids monorepo rootDir
+# issues and third-party type quirks. tsx is fast enough for production API
+# duty and the hot path is FFmpeg/HTTP, not TS overhead.
+CMD ["pnpm", "--filter", "@newsflow/api", "exec", "tsx", "src/index.ts"]
