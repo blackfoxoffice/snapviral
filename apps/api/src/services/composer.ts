@@ -141,7 +141,12 @@ async function makeSceneClip(
         '-t', String(durationS),
         '-pix_fmt', 'yuv420p',
         '-c:v', 'libx264',
-        '-preset', 'fast',
+        // Memory-conscious encoding: ultrafast preset + capped threads.
+        // libx264 allocates per-thread state, so on a 512MB-2GB container
+        // 'fast' + auto-threads OOMs. ultrafast cuts encoder memory ~3x.
+        '-preset', 'ultrafast',
+        '-threads', '2',
+        '-tune', 'zerolatency',
         '-r', String(FPS),
         '-an',
       ])
@@ -225,7 +230,11 @@ async function finalMux(args: {
         '-map', '0:v:0',
         '-map', '1:a:0',
         '-c:v', hasBurn ? 'libx264' : 'copy',
-        ...(hasBurn ? ['-preset', 'medium', '-crf', '21', '-pix_fmt', 'yuv420p'] : []),
+        // Subtitle burn-in is memory heavy (libass holds glyph caches).
+        // Cap threads + use a faster preset so we don't OOM on small containers.
+        ...(hasBurn
+          ? ['-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-threads', '2']
+          : []),
         '-c:a', 'aac',
         '-b:a', '192k',
         '-movflags', '+faststart',

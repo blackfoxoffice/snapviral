@@ -10,6 +10,7 @@ import { profileRouter } from './routes/profile.js';
 import { youtubeRouter } from './routes/youtube.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { adminRouter } from './routes/admin.js';
+import { billingRouter } from './routes/billing.js';
 import { errorHandler } from './middleware/error.js';
 import { startScheduler } from './services/scheduler.js';
 
@@ -37,6 +38,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/youtube', youtubeRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/billing', billingRouter);
 
 app.use(errorHandler);
 

@@ -13,6 +13,7 @@ import {
   ChevronsRight,
   Shield,
   Youtube,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
@@ -35,6 +36,7 @@ const NAV: NavItem[] = [
   { href: '/voiceover', label: 'Voiceover Lab', Icon: Mic, disabled: true },
   { href: '/thumbnails', label: 'Thumbnails', Icon: ImagePlus, disabled: true },
   { href: '/analytics', label: 'Analytics', Icon: TrendingUp, disabled: true },
+  { href: '/billing', label: 'Billing', Icon: CreditCard },
   { href: '/settings', label: 'Settings', Icon: Settings },
 ];
 

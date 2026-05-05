@@ -71,6 +71,32 @@ export interface AdminOverview {
   total_storage_seconds: number;
 }
 
+export type Plan = 'free' | 'creator' | 'studio';
+export type PlanStatus = 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing';
+
+export interface PlanDef {
+  key: Plan;
+  name: string;
+  description: string;
+  monthlyPriceCents: number;
+  annualPriceCents: number;
+  monthlyVideoLimit: number;
+  maxDurationSeconds: number;
+  features: string[];
+}
+
+export interface BillingMe {
+  plan: Plan;
+  plan_status: PlanStatus;
+  current_period_end: string | null;
+  has_active_subscription: boolean;
+  quota: {
+    monthly_video_limit: number;
+    max_duration_seconds: number;
+    used_this_month: number;
+  } | null;
+}
+
 export interface Project {
   id: string;
   user_id: string;

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { createProjectSchema } from '@newsflow/shared';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
+import { enforceVideoQuota } from '../middleware/quota.js';
 import { getServiceClient } from '../services/supabase.js';
 import { runPipeline } from '../pipeline/runner.js';
 
@@ -76,7 +77,7 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
   });
 });
 
-projectsRouter.post('/:id/generate', async (req: Request, res: Response) => {
+projectsRouter.post('/:id/generate', enforceVideoQuota as any, async (req: Request, res: Response) => {
   const { user } = req as AuthedRequest;
   const { id } = req.params;
   const supa = getServiceClient();

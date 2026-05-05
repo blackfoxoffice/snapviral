@@ -14,6 +14,8 @@ export const qk = {
   adminSecrets: ['admin', 'secrets'] as const,
   adminAuditLog: ['admin', 'audit'] as const,
   adminUsers: ['admin', 'users'] as const,
+  billingPlans: ['billing', 'plans'] as const,
+  billingMe: ['billing', 'me'] as const,
 };
 
 export function useDashboardStats() {
@@ -246,5 +248,35 @@ export function useAdminUsers() {
   return useQuery({
     queryKey: qk.adminUsers,
     queryFn: api.listAdminUsers,
+  });
+}
+
+// ===== Billing =====
+
+export function usePlans() {
+  return useQuery({
+    queryKey: qk.billingPlans,
+    queryFn: api.listPlans,
+    staleTime: 1000 * 60 * 60,
+  });
+}
+
+export function useBillingMe() {
+  return useQuery({
+    queryKey: qk.billingMe,
+    queryFn: api.getBillingMe,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useCreateBillingCheckout() {
+  return useMutation({
+    mutationFn: api.createBillingCheckout,
+  });
+}
+
+export function useOpenBillingPortal() {
+  return useMutation({
+    mutationFn: api.openBillingPortal,
   });
 }

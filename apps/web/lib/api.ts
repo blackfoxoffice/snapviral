@@ -2,6 +2,9 @@ import { supabase } from './supabase';
 import type {
   AdminOverview,
   AdminSecret,
+  BillingMe,
+  Plan,
+  PlanDef,
   Project,
   ProjectWithRelations,
   SecretAccessLogEntry,
@@ -304,5 +307,37 @@ export const api = {
   async listAdminUsers(): Promise<Array<{ id: string; email: string; full_name: string; is_admin: boolean; created_at: string }>> {
     const res = await fetch(`${BASE_URL}/api/admin/users`, { headers: await authHeaders() });
     return parseResponse(res);
+  },
+
+  // ===== Billing =====
+
+  async listPlans(): Promise<PlanDef[]> {
+    const res = await fetch(`${BASE_URL}/api/billing/plans`, { headers: await authHeaders() });
+    return parseResponse<PlanDef[]>(res);
+  },
+
+  async getBillingMe(): Promise<BillingMe> {
+    const res = await fetch(`${BASE_URL}/api/billing/me`, { headers: await authHeaders() });
+    return parseResponse<BillingMe>(res);
+  },
+
+  async createBillingCheckout(args: {
+    plan: Exclude<Plan, 'free'>;
+    interval: 'monthly' | 'annual';
+  }): Promise<{ url: string }> {
+    const res = await fetch(`${BASE_URL}/api/billing/checkout`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse<{ url: string }>(res);
+  },
+
+  async openBillingPortal(): Promise<{ url: string }> {
+    const res = await fetch(`${BASE_URL}/api/billing/portal`, {
+      method: 'POST',
+      headers: await authHeaders(),
+    });
+    return parseResponse<{ url: string }>(res);
   },
 };
