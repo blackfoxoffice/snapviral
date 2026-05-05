@@ -13,15 +13,9 @@ import type { ScriptOutput, ProjectLanguage } from '@newsflow/shared';
 
 export const youtubeRouter = Router();
 
-youtubeRouter.use(requireAuth);
-
-youtubeRouter.get('/auth-url', async (req: Request, res: Response) => {
-  const { user } = req as AuthedRequest;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
-  const url = await getOAuthUrl(redirectUri, user.id);
-  res.json({ url });
-});
-
+// PUBLIC route — Google's browser redirect lands here with no bearer token,
+// only `code` and `state` (where state = the user id we passed in /auth-url).
+// Must be registered BEFORE the requireAuth middleware below.
 youtubeRouter.get('/callback', async (req: Request, res: Response) => {
   const { code, state: userId } = req.query as { code?: string; state?: string };
   if (!code || !userId) {
@@ -29,7 +23,15 @@ youtubeRouter.get('/callback', async (req: Request, res: Response) => {
     return;
   }
 
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI ??
+    `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
+
+  // Where the browser should land after the callback. WEB_BASE_URL takes precedence;
+  // fall back to a sensible default (production app domain or localhost dev).
+  const webUrl =
+    process.env.WEB_BASE_URL ??
+    (process.env.NODE_ENV === 'production' ? 'https://app.snapviral.in' : 'http://localhost:8081');
 
   try {
     const tokens = await exchangeCode(code, redirectUri);
@@ -48,13 +50,21 @@ youtubeRouter.get('/callback', async (req: Request, res: Response) => {
       })
       .eq('id', userId);
 
-    const webUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(':4000', ':8081') ?? 'http://localhost:8081';
     res.redirect(`${webUrl}/settings?yt_connected=1`);
   } catch (e) {
     console.error('[youtube] OAuth callback error:', e);
-    const webUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(':4000', ':8081') ?? 'http://localhost:8081';
     res.redirect(`${webUrl}/settings?yt_error=1`);
   }
+});
+
+// All routes below this line require a bearer token.
+youtubeRouter.use(requireAuth);
+
+youtubeRouter.get('/auth-url', async (req: Request, res: Response) => {
+  const { user } = req as AuthedRequest;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
+  const url = await getOAuthUrl(redirectUri, user.id);
+  res.json({ url });
 });
 
 youtubeRouter.get('/status', async (req: Request, res: Response) => {
