@@ -25,6 +25,7 @@ import { UrlInputList } from '../../../components/project/UrlInputList';
 import { DurationPicker } from '../../../components/project/DurationPicker';
 import { VoicePicker } from '../../../components/project/VoicePicker';
 import { StylePicker } from '../../../components/project/StylePicker';
+import { TopicSuggestions } from '../../../components/project/TopicSuggestions';
 import { useCreateProject, useGenerateProject, useVoices } from '../../../lib/queries';
 
 const STEPS = [{ label: 'Source' }, { label: 'Settings' }, { label: 'Review' }];
@@ -191,6 +192,7 @@ export default function NewProject() {
 
                 {inputMode === 'research' ? (
                   <View className="gap-3">
+                    <TopicSuggestions language={language} selected={topic} onPick={setTopic} />
                     <Input
                       label="Topic or headline"
                       value={topic}
@@ -229,6 +231,7 @@ export default function NewProject() {
 
                 {inputMode === 'topic' ? (
                   <View className="gap-3">
+                    <TopicSuggestions language={language} selected={topic} onPick={setTopic} />
                     <Input
                       label="Topic or headline"
                       value={topic}
