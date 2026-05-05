@@ -1,6 +1,8 @@
 import { getServiceClient } from './supabase.js';
 import { getValidAccessToken, uploadVideoToYouTube } from './youtube.js';
 import { runPipeline } from '../pipeline/runner.js';
+import { generateYouTubeMetadata } from './youtube-metadata.js';
+import type { ScriptOutput, ProjectLanguage } from '@newsflow/shared';
 
 const POLL_INTERVAL_MS = 60_000;
 // Per-topic schedule has minute granularity, so check every minute too.
@@ -245,13 +247,71 @@ async function tryGenerateNextForUser(profile: AutomationProfile) {
   // Link the topic to the project for auditability
   await supa.from('topic_queue').update({ project_id: project.id }).eq('id', topicRow.id);
 
-  // Run the pipeline. On completion, our pipeline runner sets status='ready'
-  // — we then patch yt_scheduled_at = now so the existing publish loop picks
-  // it up immediately. (Could also stagger by N minutes; immediate is fine.)
+  // Run the pipeline. On completion:
+  //   1. Generate YouTube title/description/tags from the script (auto, no UI)
+  //   2. Set yt_scheduled_at = now so the existing publisher uploads immediately
   setImmediate(async () => {
     try {
       await runPipeline(project.id);
-      // Pipeline succeeded — schedule for upload immediately
+
+      // Auto-generate YouTube metadata for this project
+      try {
+        const { data: scriptAsset } = await supa
+          .from('assets')
+          .select('content')
+          .eq('project_id', project.id)
+          .eq('type', 'script')
+          .single();
+
+        const { data: profileSocials } = await supa
+          .from('profiles')
+          .select(
+            'social_youtube, social_instagram, social_facebook, social_twitter, social_tiktok',
+          )
+          .eq('id', profile.id)
+          .single();
+
+        if (scriptAsset?.content) {
+          const meta = await generateYouTubeMetadata({
+            script: scriptAsset.content as ScriptOutput,
+            language: profile.automation_language as ProjectLanguage,
+            topic: topicRow.topic,
+            socialHandles: profileSocials
+              ? {
+                  youtube: (profileSocials as any).social_youtube ?? null,
+                  instagram: (profileSocials as any).social_instagram ?? null,
+                  facebook: (profileSocials as any).social_facebook ?? null,
+                  twitter: (profileSocials as any).social_twitter ?? null,
+                  tiktok: (profileSocials as any).social_tiktok ?? null,
+                }
+              : undefined,
+          });
+
+          await supa
+            .from('projects')
+            .update({
+              yt_title: meta.title,
+              yt_description: meta.description,
+              yt_tags: meta.tags,
+              yt_privacy: profile.automation_privacy,
+            })
+            .eq('id', project.id);
+
+          console.log(
+            `[automation] ${profile.id}: generated YT metadata for ${project.id} ("${meta.title.slice(0, 50)}...")`,
+          );
+        }
+      } catch (metaErr) {
+        // Metadata generation is best-effort. If it fails the upload still proceeds with
+        // fall-back title (project.title = the topic) and empty desc/tags.
+        console.warn(
+          `[automation] metadata generation failed for ${project.id}, using fallback`,
+          metaErr instanceof Error ? metaErr.message : metaErr,
+        );
+      }
+
+      // Schedule for upload immediately. The /api/billing publisher loop runs
+      // every 60s and will pick this up on the next tick.
       await supa
         .from('projects')
         .update({ yt_scheduled_at: new Date().toISOString() })
@@ -259,7 +319,10 @@ async function tryGenerateNextForUser(profile: AutomationProfile) {
         .eq('status', 'ready');
       console.log(`[automation] ${profile.id}: project ${project.id} ready, queued for YouTube`);
     } catch (e) {
-      console.error(`[automation] pipeline failed for ${project.id}:`, e instanceof Error ? e.message : e);
+      console.error(
+        `[automation] pipeline failed for ${project.id}:`,
+        e instanceof Error ? e.message : e,
+      );
     }
   });
 }

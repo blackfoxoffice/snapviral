@@ -45,6 +45,7 @@ import {
   useUpdateTopic,
   useDeleteTopic,
   useClearTopics,
+  useAutoScheduleTopics,
   useGenerateTopicSuggestions,
   useYouTubeStatus,
 } from '../../lib/queries';
@@ -82,6 +83,7 @@ export default function AutomationPage() {
   const updateTopicMut = useUpdateTopic();
   const deleteMut = useDeleteTopic();
   const clearMut = useClearTopics();
+  const autoScheduleMut = useAutoScheduleTopics();
   const generateMut = useGenerateTopicSuggestions();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -570,6 +572,46 @@ export default function AutomationPage() {
                 </Button>
               </View>
             </View>
+
+            {/* Bulk reschedule banner: surfaces when any pending topic has no time */}
+            {(() => {
+              const unscheduled = unused.filter((t) => !t.scheduled_at);
+              if (unscheduled.length === 0) return null;
+              return (
+                <View
+                  className="flex-row items-center gap-3 rounded-xl px-4 py-3"
+                  style={{
+                    backgroundColor: 'rgba(245,158,11,0.08)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(245,158,11,0.25)',
+                  }}
+                >
+                  <Calendar size={14} color="#F59E0B" />
+                  <Text className="flex-1 text-[12px] text-state-warning">
+                    <Text className="font-semibold text-ink">
+                      {unscheduled.length} unscheduled topic{unscheduled.length === 1 ? '' : 's'}
+                    </Text>
+                    <Text className="text-ink-muted">
+                      {' '}— distribute them across your publish times automatically.
+                    </Text>
+                  </Text>
+                  <Button
+                    size="sm"
+                    onPress={() =>
+                      autoScheduleMut.mutate(undefined, {
+                        onSuccess: (r) =>
+                          toast.success(`Scheduled ${r.scheduled} topic${r.scheduled === 1 ? '' : 's'}`),
+                        onError: (e) =>
+                          toast.error('Schedule failed', e instanceof Error ? e.message : undefined),
+                      })
+                    }
+                    loading={autoScheduleMut.isPending}
+                  >
+                    Schedule all
+                  </Button>
+                </View>
+              );
+            })()}
 
             {queue.length > 0 ? (
               <View className="rounded-lg border border-surface-border overflow-hidden">

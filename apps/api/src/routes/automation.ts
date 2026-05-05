@@ -46,10 +46,11 @@ automationRouter.get('/status', async (req: Request, res: Response) => {
       .single(),
     supa
       .from('topic_queue')
-      .select('id, topic, position, used, used_at, project_id, created_at')
+      .select('id, topic, position, used, used_at, project_id, scheduled_at, created_at')
       .eq('user_id', user.id)
+      // Pending first (sorted by their scheduled time), then used
       .order('used', { ascending: true })
-      .order('position', { ascending: true })
+      .order('scheduled_at', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
       .limit(200),
   ]);
@@ -318,6 +319,52 @@ automationRouter.delete('/topics/:id', async (req: Request, res: Response) => {
     .eq('user_id', user.id);
   if (error) throw error;
   res.status(204).end();
+});
+
+// Distribute every UNSCHEDULED pending topic across the user's publish_times,
+// starting from the next future slot. Idempotent — only updates rows where
+// scheduled_at IS NULL.
+automationRouter.post('/topics/auto-schedule', async (req: Request, res: Response) => {
+  const { user } = req as AuthedRequest;
+  const supa = getServiceClient();
+
+  const { data: profile } = await supa
+    .from('profiles')
+    .select('publish_times')
+    .eq('id', user.id)
+    .single();
+  const publishTimes = ((profile as { publish_times?: string[] } | null)?.publish_times ?? [
+    '09:00',
+    '15:00',
+    '21:00',
+  ]).filter((t) => /^\d{2}:\d{2}$/.test(t));
+
+  const { data: unscheduled, error } = await supa
+    .from('topic_queue')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('used', false)
+    .is('scheduled_at', null)
+    .order('position', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  if (!unscheduled || unscheduled.length === 0) {
+    res.json({ scheduled: 0 });
+    return;
+  }
+
+  const slots = autoDistributeSlots(unscheduled.length, publishTimes);
+  let i = 0;
+  for (const row of unscheduled) {
+    const at = slots[i++];
+    if (!at) break;
+    await supa
+      .from('topic_queue')
+      .update({ scheduled_at: at.toISOString() })
+      .eq('id', row.id)
+      .eq('user_id', user.id);
+  }
+  res.json({ scheduled: i });
 });
 
 automationRouter.delete('/topics', async (req: Request, res: Response) => {

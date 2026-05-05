@@ -392,6 +392,14 @@ export const api = {
     await parseResponse(res);
   },
 
+  async autoScheduleTopics(): Promise<{ scheduled: number }> {
+    const res = await fetch(`${BASE_URL}/api/automation/topics/auto-schedule`, {
+      method: 'POST',
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
   async clearTopics(): Promise<void> {
     const res = await fetch(`${BASE_URL}/api/automation/topics`, {
       method: 'DELETE',

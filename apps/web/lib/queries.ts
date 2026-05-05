@@ -344,6 +344,16 @@ export function useClearTopics() {
   });
 }
 
+export function useAutoScheduleTopics() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.autoScheduleTopics(),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.automationStatus });
+    },
+  });
+}
+
 export function useGenerateTopicSuggestions() {
   return useMutation({
     mutationFn: (args: { language?: 'ta' | 'en' | 'hi'; niche?: string; count?: number }) =>
