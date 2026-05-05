@@ -24,6 +24,7 @@
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
     "p-limit": "^6.1.0",
+    "standardwebhooks": "^1.0.0",
     "undici": "^6.20.1",
     "uuid": "^10.0.0",
     "youtube-transcript": "^1.2.1",
