@@ -314,7 +314,7 @@ REQUIREMENTS:
 
 const IMAGE_STYLE_PREFIX: Record<ImageStyle, string> = {
   cartoon:
-    'Indian cartoon illustration style, bold black outlines, flat vibrant colors, dark navy background, stylized characters, Tamil news poster aesthetic, hand-drawn comic feel. ',
+    'Cartoon illustration style, bold black outlines, flat vibrant colors, dark navy background, stylized characters, news poster aesthetic, hand-drawn comic feel. ',
   illustrated:
     'Digital editorial illustration, semi-realistic, vibrant palette, clean vector-like lines, professional news magazine style, detailed but stylized. ',
   realistic:
@@ -323,8 +323,25 @@ const IMAGE_STYLE_PREFIX: Record<ImageStyle, string> = {
     'Ultra-realistic hyper-detailed photograph, 4K DSLR photography, shot on Canon EOS R5, shallow depth of field, dramatic cinematic lighting, photojournalism. ',
 };
 
-export function getStyledVisualPrompt(visualPrompt: string, imageStyle: ImageStyle): string {
-  return IMAGE_STYLE_PREFIX[imageStyle] + visualPrompt;
+// Cultural/regional context tied to the script's language. Keeps subjects,
+// locations, and visual references consistent with where the audience lives.
+// Critical bit: ANY in-image text must be in the script's native script
+// (Tamil/Devanagari) — the image model otherwise defaults to English.
+const IMAGE_LANGUAGE_CONTEXT: Record<ProjectLanguage, string> = {
+  ta:
+    'South Indian / Tamil Nadu setting and aesthetic. Indian people, Tamil signage and visual culture (Chennai, Madurai, Kerala adjacent). Any visible text in the image must be in Tamil script (தமிழ்), not English or Latin alphabet. ',
+  hi:
+    'North Indian / Indian setting and aesthetic. Indian people, Devanagari signage, Indian streets and architecture (Delhi, Mumbai, Bengaluru). Any visible text in the image must be in Hindi / Devanagari script (हिन्दी), not English or Latin alphabet. ',
+  en:
+    'International / global newsroom aesthetic. Subjects appropriate to the headline. Any in-image text in clean English. ',
+};
+
+export function getStyledVisualPrompt(
+  visualPrompt: string,
+  imageStyle: ImageStyle,
+  language: ProjectLanguage,
+): string {
+  return IMAGE_STYLE_PREFIX[imageStyle] + IMAGE_LANGUAGE_CONTEXT[language] + visualPrompt;
 }
 
 export async function callNanoBananaImage(visualPrompt: string): Promise<Buffer> {

@@ -1,4 +1,4 @@
-import type { ImageStyle, Project, ScriptOutput, ElevenLabsAlignment } from '@newsflow/shared';
+import type { ImageStyle, Project, ProjectLanguage, ScriptOutput, ElevenLabsAlignment } from '@newsflow/shared';
 import { getServiceClient } from '../services/supabase.js';
 import { ingest, type SourceContext } from './steps/01-ingest.js';
 import { generateScript } from './steps/02-script.js';
@@ -78,7 +78,14 @@ export async function runPipeline(projectId: string): Promise<void> {
     );
     const images = await step(
       'images',
-      () => generateSceneImages({ projectId, userId: typed.user_id, script, imageStyle: (typed.image_style ?? 'realistic') as ImageStyle }),
+      () =>
+        generateSceneImages({
+          projectId,
+          userId: typed.user_id,
+          script,
+          imageStyle: (typed.image_style ?? 'realistic') as ImageStyle,
+          language: typed.language as ProjectLanguage,
+        }),
       55,
     );
     const voice = await step(

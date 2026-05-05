@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import pLimit from 'p-limit';
-import type { ImageStyle, ScriptOutput } from '@newsflow/shared';
+import type { ImageStyle, ProjectLanguage, ScriptOutput } from '@newsflow/shared';
 import { callNanoBananaImage, getStyledVisualPrompt } from '../../services/openrouter.js';
 import { getServiceClient } from '../../services/supabase.js';
 
@@ -11,6 +11,7 @@ interface GenerateImagesArgs {
   userId: string;
   script: ScriptOutput;
   imageStyle: ImageStyle;
+  language: ProjectLanguage;
 }
 
 export interface SceneImagesResult {
@@ -21,7 +22,7 @@ export interface SceneImagesResult {
 export async function generateSceneImages(
   args: GenerateImagesArgs,
 ): Promise<SceneImagesResult> {
-  const { projectId, userId, script, imageStyle } = args;
+  const { projectId, userId, script, imageStyle, language } = args;
   const supa = getServiceClient();
   const limit = pLimit(3);
 
@@ -29,7 +30,7 @@ export async function generateSceneImages(
 
   const tasks = script.scenes.map((scene, idx) =>
     limit(async () => {
-      const styledPrompt = getStyledVisualPrompt(scene.visual_prompt, imageStyle);
+      const styledPrompt = getStyledVisualPrompt(scene.visual_prompt, imageStyle, language);
       const buf = await callNanoBananaImage(styledPrompt);
       const filename = `scene-${String(idx).padStart(2, '0')}.png`;
       const storagePath = `${userId}/${projectId}/images/${filename}`;
