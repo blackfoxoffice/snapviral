@@ -105,6 +105,9 @@ export interface TopicQueueItem {
   used_at: string | null;
   project_id: string | null;
   scheduled_at: string | null;
+  language: ProjectLanguage | null;
+  voice_id: string | null;
+  user_script: string | null;
   created_at: string;
 }
 

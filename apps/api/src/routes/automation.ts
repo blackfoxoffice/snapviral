@@ -46,7 +46,9 @@ automationRouter.get('/status', async (req: Request, res: Response) => {
       .single(),
     supa
       .from('topic_queue')
-      .select('id, topic, position, used, used_at, project_id, scheduled_at, created_at')
+      .select(
+        'id, topic, position, used, used_at, project_id, scheduled_at, language, voice_id, user_script, created_at',
+      )
       .eq('user_id', user.id)
       // Pending first (sorted by their scheduled time), then used
       .order('used', { ascending: true })
@@ -127,11 +129,17 @@ automationRouter.put('/settings', async (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+interface TopicInput {
+  topic: string;
+  scheduled_at?: string;
+  language?: ProjectLanguage;
+  voice_id?: string | null;
+  user_script?: string | null;
+}
+
 automationRouter.post('/topics', async (req: Request, res: Response) => {
   const { user } = req as AuthedRequest;
-  const body = req.body as {
-    topics?: Array<string | { topic: string; scheduled_at?: string }>;
-  };
+  const body = req.body as { topics?: Array<string | TopicInput> };
   if (!Array.isArray(body.topics) || body.topics.length === 0) {
     res.status(400).json({ error: 'topics array required' });
     return;
@@ -141,16 +149,22 @@ automationRouter.post('/topics', async (req: Request, res: Response) => {
     return;
   }
 
-  // Normalise both shapes (string[] | {topic, scheduled_at}[]) into one
-  const items: Array<{ topic: string; scheduled_at?: string }> = body.topics
-    .map((t) => {
+  // Normalise both shapes (string[] | TopicInput[]) into one
+  const items: TopicInput[] = body.topics
+    .map((t): TopicInput | null => {
       if (typeof t === 'string') return { topic: t };
       if (t && typeof t === 'object' && typeof t.topic === 'string') {
-        return { topic: t.topic, scheduled_at: t.scheduled_at };
+        return {
+          topic: t.topic,
+          scheduled_at: t.scheduled_at,
+          language: t.language,
+          voice_id: t.voice_id ?? null,
+          user_script: t.user_script ?? null,
+        };
       }
       return null;
     })
-    .filter((x): x is { topic: string; scheduled_at?: string } => !!x)
+    .filter((x): x is TopicInput => !!x)
     .map((x) => ({ ...x, topic: x.topic.trim() }))
     .filter((x) => x.topic.length >= 3 && x.topic.length <= 500);
 
@@ -198,22 +212,33 @@ automationRouter.post('/topics', async (req: Request, res: Response) => {
       topic: it.topic,
       position: pos,
       scheduled_at: scheduled?.toISOString() ?? null,
+      language: it.language ?? null,
+      voice_id: it.voice_id ?? null,
+      user_script: it.user_script && it.user_script.trim().length > 0 ? it.user_script : null,
     };
   });
 
   const { error, data } = await supa
     .from('topic_queue')
     .insert(rows)
-    .select('id, topic, position, scheduled_at, used, used_at, project_id, created_at');
+    .select(
+      'id, topic, position, scheduled_at, language, voice_id, user_script, used, used_at, project_id, created_at',
+    );
   if (error) throw error;
   res.json({ added: data?.length ?? 0, topics: data });
 });
 
-// Edit a topic's scheduled_at (and/or text) — used for rescheduling
+// Edit any field of an unused topic — text, time, language, voice, custom script
 automationRouter.patch('/topics/:id', async (req: Request, res: Response) => {
   const { user } = req as AuthedRequest;
   const { id } = req.params;
-  const body = req.body as { topic?: string; scheduled_at?: string | null };
+  const body = req.body as {
+    topic?: string;
+    scheduled_at?: string | null;
+    language?: ProjectLanguage | null;
+    voice_id?: string | null;
+    user_script?: string | null;
+  };
 
   const update: Record<string, unknown> = {};
   if (typeof body.topic === 'string') {
@@ -236,6 +261,20 @@ automationRouter.patch('/topics/:id', async (req: Request, res: Response) => {
       update.scheduled_at = d.toISOString();
     }
   }
+  if (body.language !== undefined) {
+    if (body.language !== null && !['ta', 'en', 'hi'].includes(body.language)) {
+      res.status(400).json({ error: 'language must be ta, en, hi, or null' });
+      return;
+    }
+    update.language = body.language;
+  }
+  if (body.voice_id !== undefined) {
+    update.voice_id = body.voice_id?.trim() || null;
+  }
+  if (body.user_script !== undefined) {
+    const s = body.user_script?.trim();
+    update.user_script = s && s.length > 0 ? s : null;
+  }
   if (Object.keys(update).length === 0) {
     res.status(400).json({ error: 'nothing to update' });
     return;
@@ -247,8 +286,8 @@ automationRouter.patch('/topics/:id', async (req: Request, res: Response) => {
     .update(update)
     .eq('id', id)
     .eq('user_id', user.id)
-    .eq('used', false) // can't reschedule already-used topics
-    .select('id, topic, scheduled_at')
+    .eq('used', false)
+    .select('id, topic, scheduled_at, language, voice_id, user_script')
     .single();
   if (error) {
     res.status(404).json({ error: 'not found or already used' });

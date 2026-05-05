@@ -316,8 +316,17 @@ export function useAddTopics() {
 export function useUpdateTopic() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; topic?: string; scheduled_at?: string | null }) =>
-      api.updateTopic(args.id, { topic: args.topic, scheduled_at: args.scheduled_at }),
+    mutationFn: (args: {
+      id: string;
+      topic?: string;
+      scheduled_at?: string | null;
+      language?: 'ta' | 'en' | 'hi' | null;
+      voice_id?: string | null;
+      user_script?: string | null;
+    }) => {
+      const { id, ...rest } = args;
+      return api.updateTopic(id, rest);
+    },
     onSuccess() {
       qc.invalidateQueries({ queryKey: qk.automationStatus });
     },

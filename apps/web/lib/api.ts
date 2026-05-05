@@ -374,7 +374,13 @@ export const api = {
 
   async updateTopic(
     id: string,
-    args: { topic?: string; scheduled_at?: string | null },
+    args: {
+      topic?: string;
+      scheduled_at?: string | null;
+      language?: 'ta' | 'en' | 'hi' | null;
+      voice_id?: string | null;
+      user_script?: string | null;
+    },
   ): Promise<TopicQueueItem> {
     const res = await fetch(`${BASE_URL}/api/automation/topics/${id}`, {
       method: 'PATCH',

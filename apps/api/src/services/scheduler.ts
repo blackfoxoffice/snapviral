@@ -196,7 +196,8 @@ async function tryGenerateNextForUser(profile: AutomationProfile) {
     return;
   }
 
-  // Claim the next topic atomically
+  // Claim the next topic atomically (function returns id+topic only, but the
+  // row may also have language/voice/user_script overrides — fetch them after).
   const { data: claimed, error: claimErr } = await supa.rpc('claim_next_topic', {
     p_user_id: profile.id,
   });
@@ -209,7 +210,20 @@ async function tryGenerateNextForUser(profile: AutomationProfile) {
     return;
   }
 
-  const topicRow = claimed[0] as { id: string; topic: string };
+  const claimedRow = claimed[0] as { id: string; topic: string };
+
+  // Hydrate the row's optional per-topic overrides
+  const { data: topicRow } = await supa
+    .from('topic_queue')
+    .select('id, topic, language, voice_id, user_script')
+    .eq('id', claimedRow.id)
+    .single();
+
+  if (!topicRow) {
+    console.error(`[automation] ${profile.id}: claimed topic ${claimedRow.id} disappeared`);
+    return;
+  }
+
   console.log(`[automation] ${profile.id}: starting "${topicRow.topic}"`);
 
   // Create the project
@@ -219,18 +233,27 @@ async function tryGenerateNextForUser(profile: AutomationProfile) {
     .eq('id', profile.id)
     .single();
 
+  // Per-topic overrides take precedence over automation defaults
+  const language = (topicRow as { language?: string | null }).language ?? profile.automation_language;
+  const voiceId =
+    (topicRow as { voice_id?: string | null }).voice_id ?? profile.automation_voice_id ?? null;
+  const customScript = (topicRow as { user_script?: string | null }).user_script;
+  const inputMode = customScript && customScript.trim().length > 0
+    ? 'script'
+    : profile.automation_input_mode;
+
   const { data: project, error: projErr } = await supa
     .from('projects')
     .insert({
       user_id: profile.id,
       title: topicRow.topic.slice(0, 80),
       topic: topicRow.topic,
-      language: profile.automation_language,
+      language,
       duration_seconds: profile.automation_duration_seconds,
-      input_mode: profile.automation_input_mode,
+      input_mode: inputMode,
       source_urls: null,
-      user_script: null,
-      voice_id: profile.automation_voice_id ?? null,
+      user_script: inputMode === 'script' ? customScript : null,
+      voice_id: voiceId,
       image_style: profile.automation_image_style,
       logo_path: (profileLogo as { logo_path?: string } | null)?.logo_path ?? null,
       yt_privacy: profile.automation_privacy,
@@ -274,7 +297,7 @@ async function tryGenerateNextForUser(profile: AutomationProfile) {
         if (scriptAsset?.content) {
           const meta = await generateYouTubeMetadata({
             script: scriptAsset.content as ScriptOutput,
-            language: profile.automation_language as ProjectLanguage,
+            language: language as ProjectLanguage,
             topic: topicRow.topic,
             socialHandles: profileSocials
               ? {

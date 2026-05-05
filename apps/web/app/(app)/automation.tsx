@@ -38,6 +38,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { toast } from '../../components/ui/Toast';
+import { VoicePicker } from '../../components/project/VoicePicker';
 import {
   useAutomationStatus,
   useUpdateAutomationSettings,
@@ -622,17 +623,18 @@ export default function AutomationPage() {
                     topic={t}
                     isLast={i === unused.length - 1 && used.length === 0}
                     onDelete={() => deleteMut.mutate(t.id)}
-                    onReschedule={(id, iso) =>
+                    onSave={(id, patch) =>
                       updateTopicMut.mutate(
-                        { id, scheduled_at: iso },
+                        { id, ...patch },
                         {
-                          onSuccess: () => toast.success('Rescheduled'),
+                          onSuccess: () => toast.success('Topic updated'),
                           onError: (e) =>
-                            toast.error('Reschedule failed', e instanceof Error ? e.message : undefined),
+                            toast.error('Update failed', e instanceof Error ? e.message : undefined),
                         },
                       )
                     }
-                    rescheduling={updateTopicMut.isPending}
+                    saving={updateTopicMut.isPending}
+                    defaultLanguage={local.automation_language as ProjectLanguage}
                   />
                 ))}
 
@@ -660,10 +662,11 @@ export default function AutomationPage() {
                     topic={t}
                     isLast={i === Math.min(used.length, 20) - 1}
                     onDelete={() => deleteMut.mutate(t.id)}
-                    onReschedule={() => {
-                      // Already used — no-op
+                    onSave={() => {
+                      // Already used — no-op (editor not shown)
                     }}
-                    rescheduling={false}
+                    saving={false}
+                    defaultLanguage={local.automation_language as ProjectLanguage}
                   />
                 ))}
               </View>
@@ -938,14 +941,24 @@ function TopicRow({
   topic,
   isLast,
   onDelete,
-  onReschedule,
-  rescheduling,
+  onSave,
+  saving,
+  defaultLanguage,
 }: {
   topic: TopicQueueItem;
   isLast: boolean;
   onDelete: () => void;
-  onReschedule: (id: string, newIso: string) => void;
-  rescheduling: boolean;
+  onSave: (
+    id: string,
+    patch: {
+      scheduled_at?: string;
+      language?: ProjectLanguage | null;
+      voice_id?: string | null;
+      user_script?: string | null;
+    },
+  ) => void;
+  saving: boolean;
+  defaultLanguage: ProjectLanguage;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -1014,12 +1027,13 @@ function TopicRow({
         </Pressable>
       </View>
       {editing ? (
-        <ScheduleEditor
-          currentIso={topic.scheduled_at}
+        <TopicEditor
+          topic={topic}
+          defaultLanguage={defaultLanguage}
           onCancel={() => setEditing(false)}
-          loading={rescheduling}
-          onSave={(iso) => {
-            onReschedule(topic.id, iso);
+          loading={saving}
+          onSave={(patch) => {
+            onSave(topic.id, patch);
             setEditing(false);
           }}
         />
@@ -1028,24 +1042,40 @@ function TopicRow({
   );
 }
 
-function ScheduleEditor({
-  currentIso,
+function TopicEditor({
+  topic,
+  defaultLanguage,
   onCancel,
   onSave,
   loading,
 }: {
-  currentIso: string | null;
+  topic: TopicQueueItem;
+  defaultLanguage: ProjectLanguage;
   onCancel: () => void;
-  onSave: (iso: string) => void;
+  onSave: (patch: {
+    scheduled_at?: string;
+    language?: ProjectLanguage | null;
+    voice_id?: string | null;
+    user_script?: string | null;
+  }) => void;
   loading: boolean;
 }) {
-  // Pre-fill with current scheduled time, or "now + 5 min" if not set.
-  const initial = currentIso ? new Date(currentIso) : new Date(Date.now() + 5 * 60 * 1000);
+  // Date/time
+  const initial = topic.scheduled_at
+    ? new Date(topic.scheduled_at)
+    : new Date(Date.now() + 5 * 60 * 1000);
   const [date, setDate] = useState(toDateInputValue(initial));
   const [time, setTime] = useState(toTimeInputValue(initial));
 
+  // Per-topic overrides; null = use automation default
+  const [language, setLanguage] = useState<ProjectLanguage>(topic.language ?? defaultLanguage);
+  const [voiceId, setVoiceId] = useState<string | null>(topic.voice_id ?? null);
+  const [scriptMode, setScriptMode] = useState<'auto' | 'custom'>(
+    topic.user_script ? 'custom' : 'auto',
+  );
+  const [customScript, setCustomScript] = useState<string>(topic.user_script ?? '');
+
   function handleSave() {
-    // Combine date YYYY-MM-DD + time HH:MM into a local Date, then ISO string
     const parsed = new Date(`${date}T${time}`);
     if (Number.isNaN(parsed.getTime())) {
       toast.error('Invalid date/time');
@@ -1055,33 +1085,156 @@ function ScheduleEditor({
       toast.error('Time must be in the future');
       return;
     }
-    onSave(parsed.toISOString());
+    onSave({
+      scheduled_at: parsed.toISOString(),
+      language,
+      voice_id: voiceId,
+      user_script:
+        scriptMode === 'custom' ? customScript.trim() || null : null,
+    });
   }
 
-  // On web we can use real <input type="date"> / <input type="time"> by
-  // rendering them through a generic html element. RN's TextInput on web
-  // accepts the type via inputMode/keyboardType but native date/time pickers
-  // aren't there. For web specifically we use a tiny inline solution:
   return (
     <View
-      className="flex-row items-center gap-2 px-4 pb-3"
-      style={{ backgroundColor: '#F4F4F5', borderTopWidth: 1, borderTopColor: '#E4E4E7' }}
+      style={{
+        backgroundColor: '#F4F4F5',
+        borderTopWidth: 1,
+        borderTopColor: '#E4E4E7',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        gap: 12,
+      }}
     >
-      <View className="py-2 flex-row items-center gap-2 flex-1">
-        <DateInput value={date} onChange={setDate} />
-        <TimeInput value={time} onChange={setTime} />
+      {/* Schedule + language row */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wide">
+            Time
+          </Text>
+          <DateInput value={date} onChange={setDate} />
+          <TimeInput value={time} onChange={setTime} />
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wide">
+            Language
+          </Text>
+          {(['ta', 'en', 'hi'] as ProjectLanguage[]).map((l) => {
+            const active = language === l;
+            return (
+              <Pressable
+                key={l}
+                onPress={() => {
+                  setLanguage(l);
+                  setVoiceId(null); // language change resets voice
+                }}
+                className="rounded-md px-2.5 py-1"
+                style={{
+                  backgroundColor: active ? '#E53935' : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: active ? '#E53935' : '#E4E4E7',
+                }}
+              >
+                <Text
+                  className="text-[11px] font-semibold"
+                  style={{ color: active ? '#fff' : '#334155' }}
+                >
+                  {l === 'ta' ? 'Tamil' : l === 'en' ? 'English' : 'Hindi'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
-      <Pressable
-        onPress={handleSave}
-        disabled={loading}
-        className="rounded-md px-3 py-1.5"
-        style={{ backgroundColor: '#E53935', opacity: loading ? 0.6 : 1 }}
-      >
-        <Text className="text-[11px] font-semibold text-white">Save</Text>
-      </Pressable>
-      <Pressable onPress={onCancel} className="rounded-md px-2 py-1.5">
-        <Text className="text-[11px] text-ink-muted">Cancel</Text>
-      </Pressable>
+
+      {/* Voice picker — filtered by chosen language */}
+      <View>
+        <Text className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wide mb-1.5">
+          Voice
+        </Text>
+        <View style={{ maxHeight: 240 }}>
+          <ScrollView style={{ maxHeight: 240 }}>
+            <VoicePicker language={language} value={voiceId} onChange={setVoiceId} />
+          </ScrollView>
+        </View>
+      </View>
+
+      {/* Script source toggle */}
+      <View>
+        <Text className="text-[11px] font-semibold text-ink-secondary uppercase tracking-wide mb-1.5">
+          Script
+        </Text>
+        <View className="flex-row gap-2 mb-2">
+          {(
+            [
+              { v: 'auto', label: 'AI generates from topic' },
+              { v: 'custom', label: 'Write my own script' },
+            ] as const
+          ).map((opt) => {
+            const active = scriptMode === opt.v;
+            return (
+              <Pressable
+                key={opt.v}
+                onPress={() => setScriptMode(opt.v)}
+                className="rounded-md px-3 py-1.5"
+                style={{
+                  backgroundColor: active ? '#E53935' : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: active ? '#E53935' : '#E4E4E7',
+                }}
+              >
+                <Text
+                  className="text-[11px] font-semibold"
+                  style={{ color: active ? '#fff' : '#334155' }}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {scriptMode === 'custom' ? (
+          <Textarea
+            rows={6}
+            value={customScript}
+            onChangeText={setCustomScript}
+            placeholder={
+              language === 'ta'
+                ? 'உங்கள் ஸ்கிரிப்டை இங்கே ஒட்டவும். AI இதை சரியாகப் பேசும்.'
+                : language === 'hi'
+                  ? 'अपना स्क्रिप्ट यहाँ पेस्ट करें। AI इसे जैसा है वैसा बोलेगा।'
+                  : 'Paste your script here. The AI will narrate it exactly as written.'
+            }
+          />
+        ) : (
+          <Text className="text-[11px] text-ink-muted leading-relaxed">
+            AI will write the script in {language === 'ta' ? 'Tamil' : language === 'hi' ? 'Hindi' : 'English'} based on the topic, then narrate it with the chosen voice.
+          </Text>
+        )}
+      </View>
+
+      {/* Actions */}
+      <View className="flex-row justify-end gap-2 pt-1">
+        <Pressable
+          onPress={onCancel}
+          disabled={loading}
+          className="rounded-md px-3 py-2"
+          style={{ opacity: loading ? 0.6 : 1 }}
+        >
+          <Text className="text-[12px] text-ink-muted">Cancel</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleSave}
+          disabled={loading}
+          className="rounded-md px-4 py-2"
+          style={{ backgroundColor: '#E53935', opacity: loading ? 0.6 : 1 }}
+        >
+          <Text className="text-[12px] font-semibold text-white">
+            {loading ? 'Saving…' : 'Save changes'}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
