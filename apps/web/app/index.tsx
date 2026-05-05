@@ -20,6 +20,22 @@ import {
 import { useAuth } from '../lib/auth';
 import { NewsflowLogo } from '../components/icons/NewsflowLogo';
 
+// Light-theme color palette (only applied on the public landing page)
+const C = {
+  bg: '#FAFAFA',
+  bgSubtle: '#F4F4F5',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  borderSoft: '#F1F1F1',
+  ink: '#0F172A',
+  inkSecondary: '#334155',
+  inkMuted: '#64748B',
+  inkSubtle: '#94A3B8',
+  brand: '#E53935',
+  brandSoft: 'rgba(229,57,53,0.08)',
+  brandBorder: 'rgba(229,57,53,0.20)',
+};
+
 export default function Index() {
   const { session, loading } = useAuth();
   const router = useRouter();
@@ -28,90 +44,153 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator color="#E53935" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg }}>
+        <ActivityIndicator color={C.brand} />
       </View>
     );
   }
 
-  // Logged-in users always go to the dashboard
   if (session) return <Redirect href="/dashboard" />;
 
-  // Public landing page
   return (
-    <ScrollView className="flex-1 bg-surface" showsVerticalScrollIndicator={false}>
+    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} showsVerticalScrollIndicator={false}>
       {/* Top bar */}
       <View
-        className="flex-row items-center justify-between"
-        style={{ paddingHorizontal: isMobile ? 20 : 48, paddingTop: 24, paddingBottom: 8 }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: isMobile ? 20 : 48,
+          paddingTop: 24,
+          paddingBottom: 8,
+        }}
       >
-        <View className="flex-row items-center gap-2.5">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <NewsflowLogo size={28} />
-          <Text className="text-[16px] font-bold text-ink tracking-tight">Newsflow Studio</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: C.ink, letterSpacing: -0.3 }}>
+            Newsflow Studio
+          </Text>
         </View>
-        <View className="flex-row items-center gap-2">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Pressable
             onPress={() => router.push('/login')}
-            className="rounded-md px-3 py-2 hover:bg-surface-raised"
+            style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 }}
           >
-            <Text className="text-[13px] text-ink-secondary">Sign in</Text>
+            <Text style={{ fontSize: 13, color: C.inkSecondary }}>Sign in</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push('/signup')}
-            className="rounded-md px-3.5 py-2"
-            style={{ backgroundColor: '#E53935' }}
+            style={{ backgroundColor: C.brand, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 }}
           >
-            <Text className="text-[13px] font-semibold text-white">Get started</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Get started</Text>
           </Pressable>
         </View>
       </View>
 
       {/* Hero */}
       <View
-        className="mx-auto w-full max-w-[1080px]"
-        style={{ paddingHorizontal: isMobile ? 20 : 48, paddingTop: isMobile ? 56 : 96, paddingBottom: 56 }}
+        style={{
+          width: '100%',
+          maxWidth: 1080,
+          alignSelf: 'center',
+          paddingHorizontal: isMobile ? 20 : 48,
+          paddingTop: isMobile ? 56 : 96,
+          paddingBottom: 56,
+        }}
       >
-        <View className="self-start mb-6 rounded-full px-3 py-1 border border-brand/25 bg-brand-soft flex-row items-center gap-2">
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#E53935' }} />
-          <Text className="text-[11px] font-semibold text-brand uppercase tracking-widest">
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            marginBottom: 24,
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: C.brandBorder,
+            backgroundColor: C.brandSoft,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.brand }} />
+          <Text
+            style={{ fontSize: 11, fontWeight: '700', color: C.brand, textTransform: 'uppercase', letterSpacing: 1.5 }}
+          >
             Tamil · English · Hindi
           </Text>
         </View>
+
         <Text
-          className={`font-bold text-ink ${isMobile ? 'text-[36px] leading-[44px]' : 'text-[56px] leading-[64px]'}`}
-          style={{ letterSpacing: -1.2 }}
+          style={{
+            fontSize: isMobile ? 36 : 56,
+            lineHeight: isMobile ? 44 : 64,
+            fontWeight: '700',
+            color: C.ink,
+            letterSpacing: -1.2,
+          }}
         >
           Turn any source into a finished{' '}
-          <Text style={{ color: '#E53935' }}>news Short.</Text>
+          <Text style={{ color: C.brand }}>news Short.</Text>
         </Text>
+
         <Text
-          className={`text-ink-muted mt-5 ${isMobile ? 'text-[15px]' : 'text-[18px]'}`}
-          style={{ maxWidth: 620, lineHeight: isMobile ? 24 : 28 }}
+          style={{
+            color: C.inkSecondary,
+            marginTop: 20,
+            fontSize: isMobile ? 15 : 18,
+            maxWidth: 620,
+            lineHeight: isMobile ? 24 : 28,
+          }}
         >
           Paste competitor URLs, your own script, or just a topic. Newsflow Studio writes the script in your language, generates visuals, narrates it, and delivers a 9:16 video — ready to publish or schedule on YouTube.
         </Text>
 
-        <View className={`mt-8 flex-row items-center gap-3 ${isMobile ? 'flex-wrap' : ''}`}>
+        <View
+          style={{
+            marginTop: 32,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+          }}
+        >
           <Pressable
             onPress={() => router.push('/signup')}
-            className="flex-row items-center gap-2 rounded-lg px-5 py-3"
-            style={{ backgroundColor: '#E53935' }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: C.brand,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderRadius: 8,
+            }}
           >
-            <Text className="text-[14px] font-semibold text-white">Start creating free</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>Start creating free</Text>
             <ArrowRight size={14} color="#fff" />
           </Pressable>
           <Pressable
             onPress={() => router.push('/login')}
-            className="flex-row items-center gap-2 rounded-lg px-5 py-3"
-            style={{ backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#2A2A2A' }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: C.card,
+              borderWidth: 1,
+              borderColor: C.border,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderRadius: 8,
+            }}
           >
-            <Text className="text-[14px] text-ink-secondary">Sign in</Text>
+            <Text style={{ fontSize: 14, color: C.inkSecondary }}>Sign in</Text>
           </Pressable>
         </View>
 
-        <View className="mt-6 flex-row items-center gap-2">
-          <ShieldCheck size={13} color="#78909C" />
-          <Text className="text-[12px] text-ink-muted">
+        <View style={{ marginTop: 24, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ShieldCheck size={13} color={C.inkMuted} />
+          <Text style={{ fontSize: 12, color: C.inkMuted }}>
             Transcripts only. We never reuse competitors' video, audio, or images.
           </Text>
         </View>
@@ -119,37 +198,73 @@ export default function Index() {
 
       {/* Pipeline strip */}
       <View
-        className="mx-auto w-full max-w-[1080px]"
-        style={{ paddingHorizontal: isMobile ? 20 : 48, paddingBottom: isMobile ? 56 : 96 }}
+        style={{
+          width: '100%',
+          maxWidth: 1080,
+          alignSelf: 'center',
+          paddingHorizontal: isMobile ? 20 : 48,
+          paddingBottom: isMobile ? 56 : 96,
+        }}
       >
-        <Text className="text-[11px] font-bold text-ink-subtle uppercase tracking-widest mb-4">
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: C.inkSubtle,
+            textTransform: 'uppercase',
+            letterSpacing: 1.5,
+            marginBottom: 16,
+          }}
+        >
           One click — six steps
         </Text>
         <View
-          className={`rounded-2xl overflow-hidden ${isMobile ? '' : 'flex-row'}`}
-          style={{ backgroundColor: '#161616', borderWidth: 1, borderColor: '#222' }}
+          style={{
+            backgroundColor: C.card,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: C.border,
+            overflow: 'hidden',
+            flexDirection: isMobile ? 'column' : 'row',
+          }}
         >
-          <PipelineStep n={1} title="Ingest" desc="URLs, script, or topic" Icon={Globe} accent="#42A5F5" first isMobile={isMobile} />
-          <PipelineStep n={2} title="Script" desc="Gemini Flash in your language" Icon={Wand2} accent="#FF1744" isMobile={isMobile} />
-          <PipelineStep n={3} title="Visuals" desc="Cinematic 9:16 imagery" Icon={ImageIcon} accent="#FFB300" isMobile={isMobile} />
-          <PipelineStep n={4} title="Voice" desc="ElevenLabs voiceover" Icon={Mic2} accent="#AB47BC" isMobile={isMobile} />
-          <PipelineStep n={5} title="Compose" desc="Subtitled, branded MP4" Icon={Upload} accent="#00E676" isMobile={isMobile} />
-          <PipelineStep n={6} title="Publish" desc="YouTube, on schedule" Icon={Calendar} accent="#E53935" isMobile={isMobile} last />
+          <PipelineStep n={1} title="Ingest" desc="URLs, script, or topic" Icon={Globe} accent="#3B82F6" first isMobile={isMobile} />
+          <PipelineStep n={2} title="Script" desc="Gemini in your language" Icon={Wand2} accent={C.brand} isMobile={isMobile} />
+          <PipelineStep n={3} title="Visuals" desc="Cinematic 9:16 imagery" Icon={ImageIcon} accent="#F59E0B" isMobile={isMobile} />
+          <PipelineStep n={4} title="Voice" desc="ElevenLabs narration" Icon={Mic2} accent="#A855F7" isMobile={isMobile} />
+          <PipelineStep n={5} title="Compose" desc="Subtitled, branded MP4" Icon={Upload} accent="#10B981" isMobile={isMobile} />
+          <PipelineStep n={6} title="Publish" desc="YouTube, on schedule" Icon={Calendar} accent={C.brand} isMobile={isMobile} last />
         </View>
       </View>
 
       {/* Features */}
       <View
-        className="mx-auto w-full max-w-[1080px]"
-        style={{ paddingHorizontal: isMobile ? 20 : 48, paddingBottom: isMobile ? 56 : 96 }}
+        style={{
+          width: '100%',
+          maxWidth: 1080,
+          alignSelf: 'center',
+          paddingHorizontal: isMobile ? 20 : 48,
+          paddingBottom: isMobile ? 56 : 96,
+        }}
       >
         <Text
-          className={`font-bold text-ink ${isMobile ? 'text-[24px]' : 'text-[32px]'} mb-8`}
-          style={{ letterSpacing: -0.6 }}
+          style={{
+            fontSize: isMobile ? 24 : 32,
+            fontWeight: '700',
+            color: C.ink,
+            letterSpacing: -0.6,
+            marginBottom: 32,
+          }}
         >
           Everything a creator needs.{'\n'}Nothing they don't.
         </Text>
-        <View className={`gap-4 ${isMobile ? '' : 'flex-row flex-wrap'}`}>
+        <View
+          style={{
+            flexDirection: isMobile ? 'column' : 'row',
+            flexWrap: 'wrap',
+            gap: 16,
+          }}
+        >
           <Feature
             title="Multi-language scripting"
             body="Native Tamil, English and Hindi narration with timed character alignment so subtitles land on the syllable."
@@ -175,32 +290,60 @@ export default function Index() {
 
       {/* Final CTA */}
       <View
-        className="mx-auto w-full max-w-[1080px]"
-        style={{ paddingHorizontal: isMobile ? 20 : 48, paddingBottom: isMobile ? 56 : 96 }}
+        style={{
+          width: '100%',
+          maxWidth: 1080,
+          alignSelf: 'center',
+          paddingHorizontal: isMobile ? 20 : 48,
+          paddingBottom: isMobile ? 56 : 96,
+        }}
       >
         <View
-          className="rounded-2xl overflow-hidden p-8 items-center"
           style={{
-            backgroundColor: 'rgba(229,57,53,0.05)',
+            backgroundColor: C.brandSoft,
+            borderRadius: 16,
             borderWidth: 1,
-            borderColor: 'rgba(229,57,53,0.2)',
+            borderColor: C.brandBorder,
+            padding: 32,
+            alignItems: 'center',
           }}
         >
           <Text
-            className={`font-bold text-ink text-center ${isMobile ? 'text-[22px]' : 'text-[28px]'} mb-2`}
-            style={{ letterSpacing: -0.5 }}
+            style={{
+              fontSize: isMobile ? 22 : 28,
+              fontWeight: '700',
+              color: C.ink,
+              textAlign: 'center',
+              letterSpacing: -0.5,
+              marginBottom: 8,
+            }}
           >
             Make your first video in five minutes.
           </Text>
-          <Text className="text-[14px] text-ink-muted text-center mb-6 max-w-[440px]">
+          <Text
+            style={{
+              fontSize: 14,
+              color: C.inkMuted,
+              textAlign: 'center',
+              marginBottom: 24,
+              maxWidth: 440,
+            }}
+          >
             Free to start. No credit card. Bring your own YouTube channel.
           </Text>
           <Pressable
             onPress={() => router.push('/signup')}
-            className="flex-row items-center gap-2 rounded-lg px-6 py-3.5"
-            style={{ backgroundColor: '#E53935' }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: C.brand,
+              paddingHorizontal: 24,
+              paddingVertical: 14,
+              borderRadius: 8,
+            }}
           >
-            <Text className="text-[14px] font-semibold text-white">Get started — it's free</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>Get started — it's free</Text>
             <ArrowRight size={14} color="#fff" />
           </Pressable>
         </View>
@@ -208,27 +351,39 @@ export default function Index() {
 
       {/* Footer */}
       <View
-        className="border-t border-surface-border"
-        style={{ paddingHorizontal: isMobile ? 20 : 48, paddingVertical: 32 }}
+        style={{
+          borderTopWidth: 1,
+          borderTopColor: C.border,
+          paddingHorizontal: isMobile ? 20 : 48,
+          paddingVertical: 32,
+          backgroundColor: C.bgSubtle,
+        }}
       >
         <View
-          className={`mx-auto w-full max-w-[1080px] ${isMobile ? '' : 'flex-row items-center justify-between'}`}
-          style={isMobile ? { gap: 16 } : {}}
+          style={{
+            width: '100%',
+            maxWidth: 1080,
+            alignSelf: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: isMobile ? 'flex-start' : 'space-between',
+            gap: 16,
+          }}
         >
-          <View className="flex-row items-center gap-2.5">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NewsflowLogo size={20} />
-            <Text className="text-[13px] font-semibold text-ink-secondary">Newsflow Studio</Text>
-            <Text className="text-[12px] text-ink-subtle">© 2026</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: C.inkSecondary }}>Newsflow Studio</Text>
+            <Text style={{ fontSize: 12, color: C.inkSubtle }}>© 2026</Text>
           </View>
-          <View className="flex-row items-center gap-5">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
             <Pressable onPress={() => router.push('/privacy' as any)}>
-              <Text className="text-[12px] text-ink-muted">Privacy</Text>
+              <Text style={{ fontSize: 12, color: C.inkMuted }}>Privacy</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/terms' as any)}>
-              <Text className="text-[12px] text-ink-muted">Terms</Text>
+              <Text style={{ fontSize: 12, color: C.inkMuted }}>Terms</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/login')}>
-              <Text className="text-[12px] text-ink-muted">Sign in</Text>
+              <Text style={{ fontSize: 12, color: C.inkMuted }}>Sign in</Text>
             </Pressable>
           </View>
         </View>
@@ -258,29 +413,41 @@ function PipelineStep({
 }) {
   return (
     <View
-      className="flex-1 p-4"
       style={{
+        flex: 1,
+        padding: 16,
         borderLeftWidth: !isMobile && !first ? 1 : 0,
         borderTopWidth: isMobile && !first ? 1 : 0,
-        borderColor: '#222',
+        borderColor: C.border,
       }}
     >
-      <View className="flex-row items-center gap-2 mb-2">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <View
-          className="items-center justify-center rounded-md"
-          style={{ width: 22, height: 22, backgroundColor: `${accent}20` }}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: `${accent}1A`,
+          }}
         >
           <Icon size={11} color={accent} />
         </View>
         <Text
-          className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest"
-          style={{ fontVariant: ['tabular-nums'] }}
+          style={{
+            fontSize: 10,
+            fontWeight: '700',
+            color: C.inkSubtle,
+            textTransform: 'uppercase',
+            letterSpacing: 1.5,
+          }}
         >
           {String(n).padStart(2, '0')}
         </Text>
       </View>
-      <Text className="text-[14px] font-semibold text-ink">{title}</Text>
-      <Text className="text-[11px] text-ink-muted mt-0.5">{desc}</Text>
+      <Text style={{ fontSize: 14, fontWeight: '600', color: C.ink }}>{title}</Text>
+      <Text style={{ fontSize: 11, color: C.inkMuted, marginTop: 2 }}>{desc}</Text>
     </View>
   );
 }
@@ -288,17 +455,18 @@ function PipelineStep({
 function Feature({ title, body, isMobile }: { title: string; body: string; isMobile: boolean }) {
   return (
     <View
-      className="rounded-xl p-5"
       style={{
         flexBasis: isMobile ? '100%' : '48%',
         flexGrow: 1,
-        backgroundColor: '#161616',
+        backgroundColor: C.card,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#222',
+        borderColor: C.border,
+        padding: 20,
       }}
     >
-      <Text className="text-[15px] font-semibold text-ink mb-2">{title}</Text>
-      <Text className="text-[13px] text-ink-muted leading-relaxed">{body}</Text>
+      <Text style={{ fontSize: 15, fontWeight: '600', color: C.ink, marginBottom: 8 }}>{title}</Text>
+      <Text style={{ fontSize: 13, color: C.inkMuted, lineHeight: 20 }}>{body}</Text>
     </View>
   );
 }
