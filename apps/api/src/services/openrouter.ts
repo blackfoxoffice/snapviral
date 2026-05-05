@@ -203,7 +203,25 @@ Rules:
         { role: 'user', content: niche ? `Trending topics in ${niche}` : 'Trending news topics' },
       ],
       temperature: 0.5,
-      response_format: { type: 'json_object' },
+      // Perplexity rejects response_format: json_object — only supports
+      // text / json_schema / regex. Use json_schema for structured output.
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'topic_list',
+          schema: {
+            type: 'object',
+            properties: {
+              topics: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+            required: ['topics'],
+            additionalProperties: false,
+          },
+        },
+      },
     }),
   });
 
@@ -216,9 +234,16 @@ Rules:
   const content = json.choices[0]?.message.content?.trim();
   if (!content) throw new Error('generate-topics returned empty content');
 
+  // Parse defensively: most providers return clean JSON, but some wrap it in
+  // a ```json fenced block. Strip fences before JSON.parse.
+  const stripped = content
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/i, '')
+    .trim();
+
   let parsed: { topics?: unknown };
   try {
-    parsed = JSON.parse(content);
+    parsed = JSON.parse(stripped);
   } catch {
     throw new Error('generate-topics returned non-JSON: ' + content.slice(0, 200));
   }
