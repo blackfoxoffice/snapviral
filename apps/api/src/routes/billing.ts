@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { Webhook } from 'standardwebhooks';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
 import { getServiceClient } from '../services/supabase.js';
@@ -23,23 +23,7 @@ export const billingRouter = Router();
 // would consume the body before we see it).
 billingRouter.post(
   '/webhook',
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  (req, res, next) => {
-    // Reuse express.raw locally
-    // We can't import express.raw at the top of an ESM file easily, so use a small inline handler.
-    let data = '';
-    req.setEncoding('utf8');
-    req.on('data', (chunk) => (data += chunk));
-    req.on('end', () => {
-      (req as Request & { rawBody?: string }).rawBody = data;
-      try {
-        (req as Request & { body: unknown }).body = JSON.parse(data);
-      } catch {
-        (req as Request & { body: unknown }).body = {};
-      }
-      next();
-    });
-  },
+  express.raw({ type: '*/*', limit: '2mb' }),
   async (req: Request, res: Response) => {
     const secret = process.env.DODO_PAYMENTS_WEBHOOK_KEY;
     if (!secret) {
@@ -48,7 +32,7 @@ billingRouter.post(
       return;
     }
 
-    const rawBody = (req as Request & { rawBody?: string }).rawBody ?? '';
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
     const headers = {
       'webhook-id': req.header('webhook-id') ?? '',
       'webhook-signature': req.header('webhook-signature') ?? '',
@@ -64,7 +48,7 @@ billingRouter.post(
       return;
     }
 
-    const event = req.body as {
+    let event: {
       type?: string;
       data?: {
         metadata?: { user_id?: string; plan?: Plan; interval?: string };
@@ -75,7 +59,13 @@ billingRouter.post(
         current_period_end?: string;
       };
       id?: string;
-    };
+    } = {};
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      res.status(400).send('invalid json');
+      return;
+    }
 
     const supa = getServiceClient();
 

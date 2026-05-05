@@ -24,7 +24,12 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: '2mb' }));
+// Skip JSON body parsing on the webhook path — it needs the raw body for
+// signature verification. The webhook route mounts express.raw itself.
+app.use((req, res, next) => {
+  if (req.path === '/api/billing/webhook') return next();
+  return express.json({ limit: '2mb' })(req, res, next);
+});
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 app.get('/health', (_req, res) => {
