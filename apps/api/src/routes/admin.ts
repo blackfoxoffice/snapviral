@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
 import { getServiceClient } from '../services/supabase.js';
 import { invalidateSecretCache } from '../services/secrets.js';
-import { createProductsIfMissing } from '../services/billing.js';
+import { createProductsIfMissing, registerWebhookIfMissing } from '../services/billing.js';
 
 export const adminRouter = Router();
 
@@ -10,19 +10,46 @@ export const adminRouter = Router();
 // without a user JWT. Authenticated by knowledge of the Supabase service
 // role key (highly privileged, already a secret) via X-Setup-Bootstrap header.
 // Used once to provision Dodo products before any admin user exists.
-adminRouter.post('/bootstrap/setup-dodo-products', async (req: Request, res: Response) => {
+function bootstrapAuth(req: Request): boolean {
   const provided = req.header('x-setup-bootstrap') ?? '';
   const expected = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-  if (!expected || provided !== expected) {
+  return !!expected && provided === expected;
+}
+
+adminRouter.post('/bootstrap/setup-dodo-products', async (req: Request, res: Response) => {
+  if (!bootstrapAuth(req)) {
     res.status(401).json({ error: 'unauthorized' });
     return;
   }
   try {
     const result = await createProductsIfMissing();
-    res.json({ ok: true, created: result.created, existed: result.existed });
+    res.json({ ok: true, created: result.created, existed: result.existed, envVars: result.envVars });
   } catch (e) {
     console.error('[admin] bootstrap setup failed:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'setup failed' });
+  }
+});
+
+adminRouter.post('/bootstrap/setup-dodo-webhook', async (req: Request, res: Response) => {
+  if (!bootstrapAuth(req)) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? `https://newsflow-api-production-f402.up.railway.app`;
+  const webhookUrl = `${apiBase.replace(/\/$/, '')}/api/billing/webhook`;
+  try {
+    const result = await registerWebhookIfMissing({ webhookUrl });
+    res.json({
+      ok: true,
+      webhook_id: result.webhookId,
+      created: result.created,
+      // Returning the secret here is necessary for one-time bootstrap.
+      // The caller MUST set DODO_PAYMENTS_WEBHOOK_KEY=<secret> on the server.
+      secret: result.secret,
+    });
+  } catch (e) {
+    console.error('[admin] bootstrap webhook failed:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'webhook setup failed' });
   }
 });
 

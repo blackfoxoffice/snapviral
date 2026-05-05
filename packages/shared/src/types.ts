@@ -71,15 +71,16 @@ export interface AdminOverview {
   total_storage_seconds: number;
 }
 
-export type Plan = 'free' | 'creator' | 'studio';
+export type Plan = 'free' | 'starter' | 'creator' | 'pro' | 'studio';
 export type PlanStatus = 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing';
+export type Currency = 'USD' | 'INR';
 
 export interface PlanDef {
   key: Plan;
   name: string;
   description: string;
-  monthlyPriceCents: number;
-  annualPriceCents: number;
+  monthlyPriceUsdCents: number;
+  monthlyPriceInrPaise: number;
   monthlyVideoLimit: number;
   maxDurationSeconds: number;
   features: string[];

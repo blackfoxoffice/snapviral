@@ -3,6 +3,7 @@ import type {
   AdminOverview,
   AdminSecret,
   BillingMe,
+  Currency,
   Plan,
   PlanDef,
   Project,
@@ -323,7 +324,7 @@ export const api = {
 
   async createBillingCheckout(args: {
     plan: Exclude<Plan, 'free'>;
-    interval: 'monthly' | 'annual';
+    currency: Currency;
   }): Promise<{ url: string }> {
     const res = await fetch(`${BASE_URL}/api/billing/checkout`, {
       method: 'POST',

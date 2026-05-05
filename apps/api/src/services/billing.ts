@@ -2,17 +2,18 @@ import DodoPayments from 'dodopayments';
 import { getSecret } from './secrets.js';
 import { getServiceClient } from './supabase.js';
 
-export type Plan = 'free' | 'creator' | 'studio';
+export type Plan = 'free' | 'starter' | 'creator' | 'pro' | 'studio';
 export type PlanStatus = 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing';
+export type Currency = 'USD' | 'INR';
 
 export interface PlanDef {
   key: Plan;
   name: string;
   description: string;
-  /** USD cents per month. 0 means free, no checkout. */
-  monthlyPriceCents: number;
-  /** USD cents per year. */
-  annualPriceCents: number;
+  /** USD cents per month. */
+  monthlyPriceUsdCents: number;
+  /** INR paise per month (smallest unit, 100 paise = ₹1). */
+  monthlyPriceInrPaise: number;
   monthlyVideoLimit: number;
   maxDurationSeconds: number;
   features: string[];
@@ -23,8 +24,8 @@ export const PLANS: Record<Plan, PlanDef> = {
     key: 'free',
     name: 'Free',
     description: 'Try Newsflow Studio',
-    monthlyPriceCents: 0,
-    annualPriceCents: 0,
+    monthlyPriceUsdCents: 0,
+    monthlyPriceInrPaise: 0,
     monthlyVideoLimit: 2,
     maxDurationSeconds: 30,
     features: [
@@ -34,38 +35,71 @@ export const PLANS: Record<Plan, PlanDef> = {
       'Watermark on output',
     ],
   },
+  starter: {
+    key: 'starter',
+    name: 'Starter',
+    description: 'Start publishing — perfect for testing the channel',
+    monthlyPriceUsdCents: 1900,
+    monthlyPriceInrPaise: 149900, // ₹1,499
+    monthlyVideoLimit: 10,
+    maxDurationSeconds: 60,
+    features: [
+      '10 videos / month',
+      '60-second max duration',
+      'No watermark',
+      'All languages (Tamil, English, Hindi)',
+      'Email support',
+    ],
+  },
   creator: {
     key: 'creator',
     name: 'Creator',
-    description: 'For solo creators publishing daily',
-    monthlyPriceCents: 1900,
-    annualPriceCents: 19000, // 2 months free
+    description: 'For creators publishing multiple times a week',
+    monthlyPriceUsdCents: 2900,
+    monthlyPriceInrPaise: 229900, // ₹2,299
     monthlyVideoLimit: 30,
     maxDurationSeconds: 60,
     features: [
       '30 videos / month',
       '60-second max duration',
-      'No watermark',
       'YouTube auto-publish + scheduling',
+      'AI-generated metadata + tags',
+      'No watermark',
+      'Email support',
+    ],
+  },
+  pro: {
+    key: 'pro',
+    name: 'Pro',
+    description: 'For daily publishers running a real channel',
+    monthlyPriceUsdCents: 4900,
+    monthlyPriceInrPaise: 399900, // ₹3,999
+    monthlyVideoLimit: 60,
+    maxDurationSeconds: 60,
+    features: [
+      '60 videos / month',
+      '60-second max duration',
       'Live web research (Perplexity)',
       'Brand logo overlay',
+      'Priority generation queue',
+      'All Creator features',
     ],
   },
   studio: {
     key: 'studio',
     name: 'Studio',
-    description: 'For news teams',
-    monthlyPriceCents: 4900,
-    annualPriceCents: 49000, // 2 months free
-    monthlyVideoLimit: 100,
+    description: 'For news teams and small media businesses',
+    monthlyPriceUsdCents: 9900,
+    monthlyPriceInrPaise: 799900, // ₹7,999
+    monthlyVideoLimit: 200,
     maxDurationSeconds: 90,
     features: [
-      '100 videos / month',
+      '200 videos / month',
       '90-second max duration',
-      'Priority generation queue',
-      'AI-generated metadata + tags',
-      'All Creator features',
-      'Email support',
+      'Highest priority queue',
+      'Team admin + audit log',
+      'Dedicated support channel',
+      'All Pro features',
     ],
   },
 };
@@ -85,34 +119,31 @@ async function getClient(): Promise<DodoPayments> {
 }
 
 /**
- * Plan/interval → env var name. Product IDs live as Railway env vars
- * because they're config, not secrets — no need to encrypt.
+ * Plan + currency → env var name.
+ * e.g. starter + USD → DODO_PRODUCT_STARTER_USD
  */
-const productIdEnvKey = (plan: Plan, interval: 'monthly' | 'annual') =>
-  `DODO_PRODUCT_${plan.toUpperCase()}_${interval.toUpperCase()}`;
+const productIdEnvKey = (plan: Plan, currency: Currency) =>
+  `DODO_PRODUCT_${plan.toUpperCase()}_${currency}`;
 
-export function getProductId(plan: Plan, interval: 'monthly' | 'annual'): string | undefined {
+export function getProductId(plan: Plan, currency: Currency): string | undefined {
   if (plan === 'free') return undefined;
-  return process.env[productIdEnvKey(plan, interval)];
+  return process.env[productIdEnvKey(plan, currency)];
 }
 
-/**
- * Create a Dodo Checkout Session for a paid plan, return the hosted URL.
- */
 export async function createCheckoutSession(args: {
   userId: string;
   email: string;
   plan: Plan;
-  interval: 'monthly' | 'annual';
+  currency: Currency;
   returnUrl: string;
 }): Promise<{ url: string; sessionId: string }> {
   if (args.plan === 'free') throw new Error('Free plan does not need checkout');
-  const productId = getProductId(args.plan, args.interval);
+  const productId = getProductId(args.plan, args.currency);
   if (!productId) {
     throw new Error(
-      `No Dodo product configured for ${args.plan}/${args.interval}. ` +
-        `Run the setup-dodo-products script to provision them and set ` +
-        `DODO_PRODUCT_${args.plan.toUpperCase()}_${args.interval.toUpperCase()} on the API server.`,
+      `No Dodo product configured for ${args.plan}/${args.currency}. ` +
+        `Run /api/admin/bootstrap/setup-dodo-products first, then set ` +
+        `${productIdEnvKey(args.plan, args.currency)} on the API server.`,
     );
   }
 
@@ -120,32 +151,31 @@ export async function createCheckoutSession(args: {
   const session = await client.checkoutSessions.create({
     product_cart: [{ product_id: productId, quantity: 1 }],
     return_url: args.returnUrl,
-    customer: {
-      email: args.email,
-    },
+    customer: { email: args.email },
     metadata: {
       user_id: args.userId,
       plan: args.plan,
-      interval: args.interval,
+      currency: args.currency,
     },
     feature_flags: {
       allow_discount_code: true,
       allow_phone_number_collection: false,
-      allow_currency_selection: true,
+      allow_currency_selection: false,
     },
   });
 
-  // The SDK returns either a URL or session id depending on version
-  const sessionAny = session as unknown as { checkout_url?: string; session_id?: string; url?: string; id?: string };
+  const sessionAny = session as unknown as {
+    checkout_url?: string;
+    session_id?: string;
+    url?: string;
+    id?: string;
+  };
   const url = sessionAny.checkout_url ?? sessionAny.url;
   const id = sessionAny.session_id ?? sessionAny.id;
   if (!url) throw new Error('Dodo checkout session has no URL: ' + JSON.stringify(sessionAny));
   return { url, sessionId: id ?? '' };
 }
 
-/**
- * Create the customer portal URL for plan changes / cancellation.
- */
 export async function getCustomerPortalUrl(customerId: string): Promise<string> {
   const client = await getClient();
   const portal = await client.customers.customerPortal.create(customerId, { send_email: false });
@@ -155,9 +185,6 @@ export async function getCustomerPortalUrl(customerId: string): Promise<string> 
   return url;
 }
 
-/**
- * Apply a Dodo subscription event to the user's profile. Idempotent.
- */
 export async function applySubscriptionEvent(args: {
   userId: string;
   plan: Plan;
@@ -180,11 +207,14 @@ export async function applySubscriptionEvent(args: {
 }
 
 /**
- * Idempotently provision the 4 paid products on Dodo (creator/studio × monthly/annual).
- * Stores the resulting product_ids in public.app_secrets so checkout sessions can
- * reference them. Safe to run repeatedly — skips products that already exist by name.
+ * Idempotently provision USD + INR products for each paid plan.
+ * Re-running is safe: existing products are detected by name and reused.
  */
-export async function createProductsIfMissing(): Promise<{ created: string[]; existed: string[] }> {
+export async function createProductsIfMissing(): Promise<{
+  created: string[];
+  existed: string[];
+  envVars: Record<string, string>;
+}> {
   const client = await getClient();
   const existing = await client.products.list();
   const byName = new Map<string, string>();
@@ -194,69 +224,99 @@ export async function createProductsIfMissing(): Promise<{ created: string[]; ex
 
   const created: string[] = [];
   const existed: string[] = [];
+  const envVars: Record<string, string> = {};
 
-  const todo: Array<{
-    name: string;
-    plan: Plan;
-    interval: 'monthly' | 'annual';
-    cents: number;
-    description: string;
-  }> = [];
+  const plans: Plan[] = ['starter', 'creator', 'pro', 'studio'];
+  const currencies: Currency[] = ['USD', 'INR'];
 
-  for (const plan of ['creator', 'studio'] as Plan[]) {
-    const def = PLANS[plan];
-    todo.push({
-      name: `Newsflow ${def.name} — Monthly`,
-      plan,
-      interval: 'monthly',
-      cents: def.monthlyPriceCents,
-      description: def.description,
-    });
-    todo.push({
-      name: `Newsflow ${def.name} — Annual`,
-      plan,
-      interval: 'annual',
-      cents: def.annualPriceCents,
-      description: def.description + ' (annual)',
-    });
-  }
+  for (const plan of plans) {
+    for (const currency of currencies) {
+      const def = PLANS[plan];
+      const cents = currency === 'USD' ? def.monthlyPriceUsdCents : def.monthlyPriceInrPaise;
+      const name = `Newsflow ${def.name} (${currency})`;
+      let productId = byName.get(name);
 
-  const envInstructions: string[] = [];
+      if (!productId) {
+        const product = await client.products.create({
+          name,
+          description: def.description,
+          tax_category: 'saas',
+          price: {
+            type: 'recurring_price',
+            currency,
+            price: cents,
+            payment_frequency_count: 1,
+            payment_frequency_interval: 'Month',
+            subscription_period_count: 1,
+            subscription_period_interval: 'Month',
+            discount: 0,
+            tax_inclusive: false,
+            purchasing_power_parity: false,
+            trial_period_days: 0,
+          } as any,
+        });
+        productId = product.product_id;
+        created.push(`${name} → ${productId}`);
+      } else {
+        existed.push(`${name} → ${productId}`);
+      }
 
-  for (const item of todo) {
-    let productId = byName.get(item.name);
-
-    if (!productId) {
-      const product = await client.products.create({
-        name: item.name,
-        description: item.description,
-        tax_category: 'saas',
-        price: {
-          type: 'recurring_price',
-          currency: 'USD',
-          price: item.cents,
-          payment_frequency_count: 1,
-          payment_frequency_interval: item.interval === 'monthly' ? 'Month' : 'Year',
-          subscription_period_count: 1,
-          subscription_period_interval: item.interval === 'monthly' ? 'Month' : 'Year',
-          discount: 0,
-          tax_inclusive: false,
-          purchasing_power_parity: false,
-          trial_period_days: 0,
-        } as any,
-      });
-      productId = product.product_id;
-      created.push(`${item.name} → ${productId}`);
-    } else {
-      existed.push(`${item.name} → ${productId}`);
+      envVars[productIdEnvKey(plan, currency)] = productId;
     }
-
-    envInstructions.push(`${productIdEnvKey(item.plan, item.interval)}=${productId}`);
   }
 
-  console.log('\n[dodo] Product setup complete. Add these to Railway env vars:');
-  for (const line of envInstructions) console.log('  ' + line);
+  console.log('\n[dodo] Product setup complete. Env vars:');
+  for (const [k, v] of Object.entries(envVars)) console.log(`  ${k}=${v}`);
   console.log('');
 
-  return { created, existed };
+  return { created, existed, envVars };
+}
+
+/**
+ * Idempotently register the subscription/payment webhook on Dodo.
+ * Returns the signing secret so we can store it as DODO_PAYMENTS_WEBHOOK_KEY.
+ */
+export async function registerWebhookIfMissing(args: {
+  webhookUrl: string;
+}): Promise<{ webhookId: string; secret: string; created: boolean }> {
+  const client = await getClient();
+
+  const wantedEvents = [
+    'subscription.active',
+    'subscription.renewed',
+    'subscription.cancelled',
+    'subscription.expired',
+    'subscription.failed',
+    'subscription.on_hold',
+    'subscription.plan_changed',
+    'subscription.updated',
+    'payment.failed',
+    'payment.succeeded',
+  ];
+
+  // Reuse if a webhook already points at the same URL
+  const list = await client.webhooks.list();
+  for await (const wh of list) {
+    if (wh && (wh as { url?: string }).url === args.webhookUrl) {
+      const sec = await client.webhooks.retrieveSecret(wh.id);
+      return {
+        webhookId: wh.id,
+        secret: (sec as unknown as { secret: string }).secret,
+        created: false,
+      };
+    }
+  }
+
+  const wh = await client.webhooks.create({
+    url: args.webhookUrl,
+    description: 'Newsflow Studio subscription + payment events',
+    filter_types: wantedEvents as any,
+    disabled: false,
+  });
+  const sec = await client.webhooks.retrieveSecret(wh.id);
+  return {
+    webhookId: wh.id,
+    secret: (sec as unknown as { secret: string }).secret,
+    created: true,
+  };
 }

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, useWindowDimensions, ActivityIndicator } from 'react-native';
-import { Check, ExternalLink, Sparkles, Zap, Crown } from 'lucide-react-native';
-import type { Plan, PlanDef } from '@newsflow/shared';
+import { Check, Sparkles, Zap, Rocket, Crown } from 'lucide-react-native';
+import type { Currency, Plan, PlanDef } from '@newsflow/shared';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -15,15 +15,50 @@ import {
 
 const PLAN_ICONS: Record<Plan, any> = {
   free: Sparkles,
-  creator: Zap,
+  starter: Zap,
+  creator: Rocket,
+  pro: Crown,
   studio: Crown,
 };
 
 const PLAN_ACCENTS: Record<Plan, string> = {
   free: '#64748B',
+  starter: '#2563EB',
   creator: '#E53935',
-  studio: '#A855F7',
+  pro: '#A855F7',
+  studio: '#0F172A',
 };
+
+/**
+ * Auto-detect Indian users:
+ *   - Browser locale starts with `en-IN`, `ta-IN`, `hi-IN`, etc.
+ *   - OR timezone is Asia/Kolkata.
+ * Anything else falls back to USD.
+ */
+function detectCurrency(): Currency {
+  if (typeof window === 'undefined') return 'USD';
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta') return 'INR';
+  } catch {
+    // ignore
+  }
+  const langs = (navigator.languages ?? [navigator.language]).filter(Boolean);
+  for (const l of langs) {
+    if (l.toUpperCase().endsWith('-IN')) return 'INR';
+  }
+  return 'USD';
+}
+
+function formatPrice(currency: Currency, smallestUnits: number): string {
+  if (currency === 'USD') {
+    const dollars = smallestUnits / 100;
+    return '$' + dollars.toFixed(0);
+  }
+  // INR — paise → rupees, with thousands sep
+  const rupees = smallestUnits / 100;
+  return '₹' + rupees.toLocaleString('en-IN');
+}
 
 export default function BillingPage() {
   const { data: plans, isLoading: plansLoading } = usePlans();
@@ -32,9 +67,13 @@ export default function BillingPage() {
   const portalMut = useOpenBillingPortal();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-  const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [currency, setCurrency] = useState<Currency>('USD');
 
-  // After checkout success, Dodo bounces back to ?checkout=success
+  // Auto-detect once on mount
+  useEffect(() => {
+    setCurrency(detectCurrency());
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -47,7 +86,10 @@ export default function BillingPage() {
   async function handleSubscribe(plan: Plan) {
     if (plan === 'free') return;
     try {
-      const { url } = await checkoutMut.mutateAsync({ plan, interval });
+      const { url } = await checkoutMut.mutateAsync({
+        plan: plan as Exclude<Plan, 'free'>,
+        currency,
+      });
       if (typeof window !== 'undefined') window.location.href = url;
     } catch (e) {
       toast.error('Could not start checkout', e instanceof Error ? e.message : undefined);
@@ -63,10 +105,17 @@ export default function BillingPage() {
     }
   }
 
+  // Order plans for display: free, starter, creator, pro, studio
+  const orderedPlans = useMemo(() => {
+    if (!plans) return undefined;
+    const order: Plan[] = ['free', 'starter', 'creator', 'pro', 'studio'];
+    return order.map((k) => plans.find((p) => p.key === k)).filter(Boolean) as PlanDef[];
+  }, [plans]);
+
   return (
     <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
       <View
-        className="mx-auto w-full max-w-[1100px] pb-20"
+        className="mx-auto w-full max-w-[1200px] pb-20"
         style={{ paddingHorizontal: isMobile ? 16 : 32, paddingTop: isMobile ? 20 : 32 }}
       >
         <View className={isMobile ? 'mb-6' : 'mb-8'}>
@@ -81,7 +130,6 @@ export default function BillingPage() {
           </Text>
         </View>
 
-        {/* Current plan card */}
         {meLoading ? (
           <View className="rounded-xl bg-surface-card border border-surface-border p-5 mb-6">
             <ActivityIndicator size="small" color="#E53935" />
@@ -90,65 +138,80 @@ export default function BillingPage() {
           <CurrentPlanCard me={me} onManage={handleManage} portalLoading={portalMut.isPending} />
         ) : null}
 
-        {/* Interval toggle */}
+        {/* Currency toggle */}
         <View className="flex-row items-center justify-center mb-6">
           <View
             className="flex-row p-1 rounded-full"
             style={{ backgroundColor: '#F4F4F5', borderWidth: 1, borderColor: '#E4E4E7' }}
           >
-            <Pressable
-              onPress={() => setInterval('monthly')}
-              className="px-4 py-2 rounded-full"
-              style={interval === 'monthly' ? { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } } : undefined}
-            >
-              <Text className="text-[12px] font-semibold" style={{ color: interval === 'monthly' ? '#0F172A' : '#64748B' }}>
-                Monthly
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setInterval('annual')}
-              className="flex-row items-center gap-2 px-4 py-2 rounded-full"
-              style={interval === 'annual' ? { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } } : undefined}
-            >
-              <Text className="text-[12px] font-semibold" style={{ color: interval === 'annual' ? '#0F172A' : '#64748B' }}>
-                Annual
-              </Text>
-              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: 'rgba(0,200,83,0.15)' }}>
-                <Text className="text-[10px] font-bold" style={{ color: '#00C853' }}>2 mo free</Text>
-              </View>
-            </Pressable>
+            {(['USD', 'INR'] as Currency[]).map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setCurrency(c)}
+                className="px-4 py-2 rounded-full"
+                style={
+                  currency === c
+                    ? {
+                        backgroundColor: '#FFFFFF',
+                        shadowColor: '#000',
+                        shadowOpacity: 0.04,
+                        shadowRadius: 4,
+                        shadowOffset: { width: 0, height: 1 },
+                      }
+                    : undefined
+                }
+              >
+                <Text
+                  className="text-[12px] font-semibold"
+                  style={{ color: currency === c ? '#0F172A' : '#64748B' }}
+                >
+                  {c === 'USD' ? '🌍 USD' : '🇮🇳 INR'}
+                </Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
-        {/* Pricing cards */}
-        <View className={`gap-4 ${isMobile ? '' : 'flex-row'}`}>
-          {plansLoading || !plans
-            ? [1, 2, 3].map((i) => (
+        {/* Pricing grid: 5 plans (free + 4 paid). 5-up on desktop, 1-up mobile */}
+        <View
+          style={{
+            flexDirection: isMobile ? 'column' : 'row',
+            flexWrap: 'wrap',
+            gap: 12,
+            justifyContent: 'center',
+          }}
+        >
+          {plansLoading || !orderedPlans
+            ? [1, 2, 3, 4, 5].map((i) => (
                 <View
                   key={i}
                   className="rounded-2xl bg-surface-card border border-surface-border p-6"
-                  style={{ flex: 1, minHeight: 380 }}
+                  style={{ flex: 1, minWidth: isMobile ? '100%' : 220, minHeight: 460 }}
                 >
                   <ActivityIndicator size="small" color="#E53935" />
                 </View>
               ))
-            : plans.map((plan) => (
-                <PlanCard
+            : orderedPlans.map((plan) => (
+                <View
                   key={plan.key}
-                  plan={plan}
-                  interval={interval}
-                  isCurrent={me?.plan === plan.key}
-                  isPaying={me?.has_active_subscription === true && me.plan === plan.key}
-                  onSubscribe={() => handleSubscribe(plan.key)}
-                  loading={checkoutMut.isPending}
-                />
+                  style={{ flex: 1, minWidth: isMobile ? '100%' : 220, maxWidth: isMobile ? '100%' : 240 }}
+                >
+                  <PlanCard
+                    plan={plan}
+                    currency={currency}
+                    isCurrent={me?.plan === plan.key}
+                    isPaying={me?.has_active_subscription === true && me.plan === plan.key}
+                    onSubscribe={() => handleSubscribe(plan.key)}
+                    loading={checkoutMut.isPending}
+                  />
+                </View>
               ))}
         </View>
 
         <View className="mt-8 items-center">
           <Text className="text-[11px] text-ink-subtle text-center max-w-[480px]">
-            Prices in USD. Charges happen in your local currency at checkout.
             Cancel anytime — your plan remains active until the end of the billing period.
+            {' '}Indian customers are billed in INR; everyone else in USD.
           </Text>
         </View>
       </View>
@@ -199,7 +262,12 @@ function CurrentPlanCard({
           </View>
           {me.current_period_end ? (
             <Text className="text-[11px] text-ink-muted mt-0.5">
-              Renews {new Date(me.current_period_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              Renews{' '}
+              {new Date(me.current_period_end).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </Text>
           ) : null}
         </View>
@@ -237,14 +305,14 @@ function CurrentPlanCard({
 
 function PlanCard({
   plan,
-  interval,
+  currency,
   isCurrent,
   isPaying,
   onSubscribe,
   loading,
 }: {
   plan: PlanDef;
-  interval: 'monthly' | 'annual';
+  currency: Currency;
   isCurrent: boolean;
   isPaying: boolean;
   onSubscribe: () => void;
@@ -253,56 +321,55 @@ function PlanCard({
   const Icon = PLAN_ICONS[plan.key];
   const accent = PLAN_ACCENTS[plan.key];
 
-  const cents = interval === 'monthly' ? plan.monthlyPriceCents : plan.annualPriceCents;
-  const monthlyEquivalent = interval === 'annual' ? Math.round(cents / 12) : cents;
+  const cents =
+    currency === 'USD' ? plan.monthlyPriceUsdCents : plan.monthlyPriceInrPaise;
   const isFeatured = plan.key === 'creator';
 
   return (
     <Card className={isFeatured ? 'shadow-lg' : ''}>
       <View
         style={{
-          padding: 24,
+          padding: 20,
           borderTopWidth: isFeatured ? 3 : 0,
           borderTopColor: accent,
         }}
       >
-        <View className="flex-row items-center gap-2 mb-4">
+        <View className="flex-row items-center gap-2 mb-3">
           <View
             className="items-center justify-center rounded-md"
-            style={{ width: 28, height: 28, backgroundColor: `${accent}1A` }}
+            style={{ width: 24, height: 24, backgroundColor: `${accent}1A` }}
           >
-            <Icon size={14} color={accent} />
+            <Icon size={12} color={accent} />
           </View>
-          <Text className="text-[14px] font-bold text-ink uppercase tracking-wide">{plan.name}</Text>
-          {isFeatured ? (
-            <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: accent }}>
-              <Text className="text-[9px] font-bold uppercase text-white tracking-widest">Most popular</Text>
-            </View>
-          ) : null}
+          <Text className="text-[13px] font-bold text-ink uppercase tracking-wide">{plan.name}</Text>
         </View>
 
-        <Text className="text-[12px] text-ink-muted mb-4">{plan.description}</Text>
-
-        <View className="flex-row items-baseline mb-1">
-          <Text className="text-[36px] font-bold text-ink" style={{ letterSpacing: -1 }}>
-            ${(monthlyEquivalent / 100).toFixed(0)}
-          </Text>
-          <Text className="text-[13px] text-ink-muted ml-1">/ month</Text>
-        </View>
-        {interval === 'annual' && plan.annualPriceCents > 0 ? (
-          <Text className="text-[11px] text-ink-subtle mb-5">
-            ${(plan.annualPriceCents / 100).toFixed(0)} billed yearly
-          </Text>
+        {isFeatured ? (
+          <View className="rounded-full px-2 py-0.5 mb-3 self-start" style={{ backgroundColor: accent }}>
+            <Text className="text-[9px] font-bold uppercase text-white tracking-widest">Most popular</Text>
+          </View>
         ) : (
-          <View className="h-4 mb-5" />
+          <View className="h-4 mb-3" />
         )}
 
+        <Text className="text-[11px] text-ink-muted mb-3" numberOfLines={2}>
+          {plan.description}
+        </Text>
+
+        <View className="flex-row items-baseline mb-1">
+          <Text className="text-[28px] font-bold text-ink" style={{ letterSpacing: -0.8 }}>
+            {formatPrice(currency, cents)}
+          </Text>
+          <Text className="text-[11px] text-ink-muted ml-1">/ mo</Text>
+        </View>
+        <View className="h-3 mb-4" />
+
         {isCurrent ? (
-          <Button variant="secondary" disabled block>
+          <Button variant="secondary" disabled block size="sm">
             Current plan
           </Button>
         ) : plan.key === 'free' ? (
-          <Button variant="secondary" disabled block>
+          <Button variant="secondary" disabled block size="sm">
             Free forever
           </Button>
         ) : (
@@ -310,17 +377,18 @@ function PlanCard({
             onPress={onSubscribe}
             loading={loading}
             block
+            size="sm"
             variant={isFeatured ? 'primary' : 'secondary'}
           >
-            {isPaying ? 'Switch to this plan' : `Get ${plan.name}`}
+            {isPaying ? 'Switch' : `Get ${plan.name}`}
           </Button>
         )}
 
-        <View className="mt-5 gap-2">
+        <View className="mt-4 gap-2">
           {plan.features.map((f) => (
             <View key={f} className="flex-row items-start gap-2">
-              <Check size={13} color={accent} style={{ marginTop: 3 }} />
-              <Text className="flex-1 text-[12px] text-ink-secondary leading-relaxed">{f}</Text>
+              <Check size={11} color={accent} style={{ marginTop: 3 }} />
+              <Text className="flex-1 text-[11px] text-ink-secondary leading-relaxed">{f}</Text>
             </View>
           ))}
         </View>

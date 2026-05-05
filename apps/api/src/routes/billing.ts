@@ -6,6 +6,7 @@ import {
   PLANS,
   Plan,
   PlanStatus,
+  Currency,
   applySubscriptionEvent,
   createCheckoutSession,
   getCustomerPortalUrl,
@@ -51,7 +52,7 @@ billingRouter.post(
     let event: {
       type?: string;
       data?: {
-        metadata?: { user_id?: string; plan?: Plan; interval?: string };
+        metadata?: { user_id?: string; plan?: Plan; currency?: string };
         customer?: { customer_id?: string; email?: string };
         subscription_id?: string;
         status?: string;
@@ -157,13 +158,14 @@ billingRouter.get('/me', async (req: Request, res: Response) => {
 
 billingRouter.post('/checkout', async (req: Request, res: Response) => {
   const { user } = req as AuthedRequest;
-  const { plan, interval } = req.body as { plan?: Plan; interval?: 'monthly' | 'annual' };
-  if (plan !== 'creator' && plan !== 'studio') {
-    res.status(400).json({ error: 'plan must be creator or studio' });
+  const { plan, currency } = req.body as { plan?: Plan; currency?: Currency };
+  const validPaid: Plan[] = ['starter', 'creator', 'pro', 'studio'];
+  if (!plan || !validPaid.includes(plan)) {
+    res.status(400).json({ error: 'plan must be one of: starter, creator, pro, studio' });
     return;
   }
-  if (interval !== 'monthly' && interval !== 'annual') {
-    res.status(400).json({ error: 'interval must be monthly or annual' });
+  if (currency !== 'USD' && currency !== 'INR') {
+    res.status(400).json({ error: 'currency must be USD or INR' });
     return;
   }
   if (!user.email) {
@@ -177,7 +179,7 @@ billingRouter.post('/checkout', async (req: Request, res: Response) => {
       userId: user.id,
       email: user.email,
       plan,
-      interval,
+      currency,
       returnUrl: `${webBase}/billing?checkout=success`,
     });
     res.json({ url: session.url });
