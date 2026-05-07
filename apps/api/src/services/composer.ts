@@ -2,20 +2,56 @@ import path from 'node:path';
 import ffmpeg from 'fluent-ffmpeg';
 import type { ElevenLabsAlignment, ProjectLanguage, Scene } from '@newsflow/shared';
 
-// Per-language font face. The Dockerfile installs the full Noto family
-// (`fonts-noto-extra`, `fonts-noto-core`, `fonts-noto-ui-core`) which covers
-// every Indic script we support. libass / libfribidi look up by family name.
+// Per-language font face. The Dockerfile installs `fonts-noto`,
+// `fonts-noto-extra` and `fonts-noto-cjk` which collectively cover every
+// script we burn in. libass / libfribidi look up by family name.
 const SUBTITLE_FONT_BY_LANG: Record<ProjectLanguage, string> = {
+  // South Asian
   ta: 'Noto Sans Tamil',
-  hi: 'Noto Sans Devanagari',  // Hindi
-  en: 'Noto Sans',
+  hi: 'Noto Sans Devanagari',
   kn: 'Noto Sans Kannada',
   te: 'Noto Sans Telugu',
   ml: 'Noto Sans Malayalam',
   bn: 'Noto Sans Bengali',
-  mr: 'Noto Sans Devanagari',  // Marathi shares Devanagari
+  mr: 'Noto Sans Devanagari',     // Marathi shares Devanagari
   gu: 'Noto Sans Gujarati',
-  pa: 'Noto Sans Gurmukhi',    // Punjabi
+  pa: 'Noto Sans Gurmukhi',
+  ur: 'Noto Naskh Arabic',        // Urdu uses Perso-Arabic script
+  // Latin & cousins (covered by Noto Sans)
+  en: 'Noto Sans',
+  es: 'Noto Sans',
+  fr: 'Noto Sans',
+  de: 'Noto Sans',
+  it: 'Noto Sans',
+  pt: 'Noto Sans',
+  nl: 'Noto Sans',
+  pl: 'Noto Sans',
+  sv: 'Noto Sans',
+  da: 'Noto Sans',
+  fi: 'Noto Sans',
+  no: 'Noto Sans',
+  ro: 'Noto Sans',
+  hu: 'Noto Sans',
+  cs: 'Noto Sans',
+  sk: 'Noto Sans',
+  hr: 'Noto Sans',
+  tr: 'Noto Sans',
+  vi: 'Noto Sans',
+  id: 'Noto Sans',
+  ms: 'Noto Sans',
+  fil: 'Noto Sans',
+  // Cyrillic
+  ru: 'Noto Sans',
+  uk: 'Noto Sans',
+  bg: 'Noto Sans',
+  // Greek
+  el: 'Noto Sans',
+  // Arabic
+  ar: 'Noto Naskh Arabic',
+  // CJK
+  zh: 'Noto Sans CJK SC',
+  ja: 'Noto Sans CJK JP',
+  ko: 'Noto Sans CJK KR',
 };
 
 if (process.env.FFMPEG_PATH) ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);

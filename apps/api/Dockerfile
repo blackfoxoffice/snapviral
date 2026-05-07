@@ -9,8 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# fonts-noto-extra ships every Indic Noto script we burn in via FFmpeg/libass:
-# Tamil, Telugu, Kannada, Malayalam, Bengali, Gujarati, Devanagari, Gurmukhi.
+# Font coverage for all 40 ElevenLabs-aligned languages:
+#   fonts-noto       — Latin, Cyrillic, Greek
+#   fonts-noto-cjk   — Chinese, Japanese, Korean
+#   fonts-noto-extra — every Indic script (Tamil, Telugu, Kannada, Malayalam,
+#                      Bengali, Gujarati, Devanagari, Gurmukhi) + Naskh
+#                      Arabic (used for Arabic and Urdu subtitle burn-in).
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH

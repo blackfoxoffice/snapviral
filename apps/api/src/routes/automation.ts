@@ -431,8 +431,17 @@ automationRouter.get('/topic-categories', (_req, res) => {
   res.json({ categories: listTopicCategories() });
 });
 
+// Aligned with ElevenLabs multilingual v2 + v3. Update both VALID_LANGUAGES
+// here and the ProjectLanguage union in @newsflow/shared together.
 const VALID_LANGUAGES: ProjectLanguage[] = [
-  'ta', 'en', 'hi', 'kn', 'te', 'ml', 'bn', 'mr', 'gu', 'pa',
+  // South Asian
+  'ta', 'hi', 'kn', 'te', 'ml', 'bn', 'mr', 'gu', 'pa', 'ur',
+  // Global + European
+  'en', 'es', 'fr', 'de', 'it', 'pt', 'nl',
+  'pl', 'sv', 'da', 'fi', 'no', 'ro', 'hu', 'cs', 'sk', 'hr',
+  'bg', 'el', 'tr', 'ru', 'uk',
+  // MENA + East Asia + SE Asia
+  'ar', 'zh', 'ja', 'ko', 'vi', 'id', 'ms', 'fil',
 ];
 
 // AI topic suggestions — Perplexity Sonar grounded in live web search

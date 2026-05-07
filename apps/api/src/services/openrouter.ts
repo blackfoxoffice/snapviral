@@ -3,31 +3,45 @@ import type { SourceContext } from '../pipeline/steps/01-ingest.js';
 import { requireSecret } from './secrets.js';
 
 const LANG_NAME: Record<ProjectLanguage, string> = {
-  ta: 'Tamil',
+  // South Asian
+  ta: 'Tamil', hi: 'Hindi', kn: 'Kannada', te: 'Telugu', ml: 'Malayalam',
+  bn: 'Bengali', mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi', ur: 'Urdu',
+  // Global
   en: 'English',
-  hi: 'Hindi',
-  kn: 'Kannada',
-  te: 'Telugu',
-  ml: 'Malayalam',
-  bn: 'Bengali',
-  mr: 'Marathi',
-  gu: 'Gujarati',
-  pa: 'Punjabi',
+  // European
+  es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese',
+  nl: 'Dutch', pl: 'Polish', sv: 'Swedish', da: 'Danish', fi: 'Finnish',
+  no: 'Norwegian', ro: 'Romanian', hu: 'Hungarian', cs: 'Czech', sk: 'Slovak',
+  hr: 'Croatian', bg: 'Bulgarian', el: 'Greek', tr: 'Turkish', ru: 'Russian',
+  uk: 'Ukrainian',
+  // MENA
+  ar: 'Arabic',
+  // East Asia
+  zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
+  // South-East Asia
+  vi: 'Vietnamese', id: 'Indonesian', ms: 'Malay', fil: 'Filipino',
 };
 
-// Words per second of voiceover, language-dependent. Indic scripts trend
-// slower for a given character count due to compound consonants.
+// Words per second of voiceover, language-dependent. CJK scripts trend
+// faster (compact glyphs), Indic slower (compound consonants).
 const LANG_WPS: Record<ProjectLanguage, number> = {
-  ta: 2.5,
-  hi: 2.7,
+  // South Asian — slower due to compound consonants
+  ta: 2.5, hi: 2.7, kn: 2.5, te: 2.5, ml: 2.4,
+  bn: 2.6, mr: 2.7, gu: 2.7, pa: 2.7, ur: 2.6,
+  // Global
   en: 2.8,
-  kn: 2.5,
-  te: 2.5,
-  ml: 2.4,
-  bn: 2.6,
-  mr: 2.7,
-  gu: 2.7,
-  pa: 2.7,
+  // European (Latin / Cyrillic / Greek)
+  es: 2.9, fr: 2.7, de: 2.6, it: 2.9, pt: 2.8,
+  nl: 2.7, pl: 2.6, sv: 2.7, da: 2.7, fi: 2.5,
+  no: 2.7, ro: 2.7, hu: 2.5, cs: 2.6, sk: 2.6,
+  hr: 2.7, bg: 2.6, el: 2.7, tr: 2.6, ru: 2.6,
+  uk: 2.6,
+  // MENA
+  ar: 2.6,
+  // East Asia — character-dense
+  zh: 4.0, ja: 3.5, ko: 3.2,
+  // South-East Asia
+  vi: 2.8, id: 2.8, ms: 2.8, fil: 2.8,
 };
 
 function buildScriptSystemPrompt(
@@ -538,16 +552,53 @@ const IMAGE_STYLE_PREFIX: Record<ImageStyle, string> = {
 // misspell almost any non-Latin text (especially in cartoon style). All text
 // belongs in the subtitle/overlay layer, not in the pixels.
 const IMAGE_LANGUAGE_CONTEXT: Record<ProjectLanguage, string> = {
-  ta: 'South Indian / Tamil Nadu setting and aesthetic. Indian people, Indian streets and architecture (Chennai, Madurai, Kerala adjacent). ',
-  hi: 'North Indian / Hindi-belt setting. Indian people, Indian streets and architecture (Delhi, Mumbai, Bengaluru, Lucknow). ',
+  // South Asian
+  ta: 'South Indian / Tamil Nadu setting. Tamil people, Chennai / Madurai / Coimbatore streets and Dravidian architecture. ',
+  hi: 'North Indian / Hindi-belt setting. Indian people, Delhi / Lucknow / Mumbai streets and architecture. ',
+  kn: 'Karnataka setting. South Indian people, Bengaluru / Mysuru / Mangaluru streets and Hoysala-era temples. ',
+  te: 'Andhra Pradesh & Telangana setting. South Indian people, Hyderabad / Vijayawada streets and architecture. ',
+  ml: 'Kerala setting. South Indian people, Kochi / Thiruvananthapuram / Kozhikode streets, backwaters and coastal architecture. ',
+  bn: 'Bengali setting. West Bengal / Bangladesh, Kolkata trams and Dhaka streets, colonial-era and traditional architecture. ',
+  mr: 'Maharashtra setting. Marathi people, Mumbai / Pune streets, fort architecture, Konkan coast. ',
+  gu: 'Gujarat setting. Gujarati people, Ahmedabad / Surat streets, stepwells and Indo-Saracenic architecture, vibrant textiles. ',
+  pa: 'Punjab setting. Punjabi people, Amritsar / Chandigarh / Lahore, Sikh-temple architecture, mustard fields. ',
+  ur: 'Urdu / Pakistani / Indian Muslim setting. Lahore / Karachi / Lucknow streets, Mughal-era architecture, calligraphy aesthetic. ',
+  // Global
   en: 'International / global newsroom aesthetic. Subjects appropriate to the headline. ',
-  kn: 'Karnataka / Bengaluru setting and aesthetic. South Indian people, Bengaluru / Mysuru / Mangaluru streets and architecture. ',
-  te: 'Telugu / Andhra Pradesh & Telangana setting. South Indian people, Hyderabad / Vijayawada streets and architecture. ',
-  ml: 'Kerala setting and aesthetic. South Indian people, Kochi / Thiruvananthapuram / Kozhikode streets, backwaters and coastal architecture. ',
-  bn: 'Bengali / West Bengal & Bangladesh setting. Indian people, Kolkata streets, trams and colonial-era architecture. ',
-  mr: 'Marathi / Maharashtra setting. Indian people, Mumbai / Pune streets and architecture. ',
-  gu: 'Gujarati / Gujarat setting. Indian people, Ahmedabad / Surat streets and architecture, vibrant textiles. ',
-  pa: 'Punjabi / Punjab setting. Indian / Pakistani people, Amritsar / Chandigarh / Lahore streets, fields and Sikh-temple architecture. ',
+  // European — Western
+  es: 'Spanish / Latin American setting. Madrid, Barcelona, Mexico City, Buenos Aires streets and architecture. ',
+  fr: 'French setting. Parisian / Lyonnais streets, Haussmann buildings, café culture. ',
+  de: 'German setting. Berlin / Munich streets, modernist and traditional architecture. ',
+  it: 'Italian setting. Rome / Milan / Naples streets, Renaissance and Roman architecture. ',
+  pt: 'Portuguese / Brazilian setting. Lisbon / São Paulo / Rio streets, azulejo tile aesthetic. ',
+  nl: 'Dutch setting. Amsterdam / Rotterdam canals, gabled houses, bicycle culture. ',
+  // European — Northern / Central / Eastern
+  pl: 'Polish setting. Warsaw / Kraków streets, post-war modernist and old-town architecture. ',
+  sv: 'Swedish setting. Stockholm / Gothenburg streets, Scandinavian minimalism. ',
+  da: 'Danish setting. Copenhagen streets, Hygge interiors, cycling culture. ',
+  fi: 'Finnish setting. Helsinki streets, lake landscapes, modernist architecture. ',
+  no: 'Norwegian setting. Oslo / Bergen streets, fjords, wood-clad architecture. ',
+  ro: 'Romanian setting. Bucharest / Cluj streets, Brutalist and Belle-Époque mix. ',
+  hu: 'Hungarian setting. Budapest streets, Art Nouveau architecture, Danube riverfront. ',
+  cs: 'Czech setting. Prague streets, Gothic and Baroque architecture. ',
+  sk: 'Slovak setting. Bratislava streets, Carpathian villages and Tatra mountains. ',
+  hr: 'Croatian setting. Zagreb / Split / Dubrovnik streets, Adriatic coastal towns. ',
+  bg: 'Bulgarian setting. Sofia / Plovdiv streets, Orthodox church domes and Black-Sea coast. ',
+  el: 'Greek setting. Athens / Thessaloniki / Cyclades, ancient ruins, white-and-blue island towns. ',
+  tr: 'Turkish setting. Istanbul / Ankara streets, mosques, bazaars and Bosphorus skyline. ',
+  ru: 'Russian setting. Moscow / Saint Petersburg streets, Orthodox cathedrals, Soviet-era apartment blocks. ',
+  uk: 'Ukrainian setting. Kyiv / Lviv streets, post-Soviet plus Habsburg-era architecture. ',
+  // MENA
+  ar: 'Arab / Middle Eastern setting. Cairo / Dubai / Riyadh streets, mosques, souks, desert landscapes. ',
+  // East Asia
+  zh: 'Chinese setting. Shanghai / Beijing / Hong Kong streets, neon hutongs, modern skyscrapers and traditional roofs. ',
+  ja: 'Japanese setting. Tokyo / Kyoto / Osaka streets, neon districts, shrines, suburban density. ',
+  ko: 'Korean setting. Seoul / Busan streets, hanok rooftops alongside neon high-rises. ',
+  // South-East Asia
+  vi: 'Vietnamese setting. Hanoi / Ho Chi Minh City streets, scooters, French-colonial buildings. ',
+  id: 'Indonesian setting. Jakarta / Bali streets, tropical greenery, traditional and modern mix. ',
+  ms: 'Malaysian setting. Kuala Lumpur / Penang streets, mosques, modern skyline. ',
+  fil: 'Filipino setting. Manila / Cebu streets, Spanish-colonial churches and tropical neighborhoods. ',
 };
 
 // Hard-coded across every image, every style, every language: NO TEXT.

@@ -1,15 +1,20 @@
-export type ProjectStatus = 'draft' | 'queued' | 'running' | 'ready' | 'failed';
+// =====================================================================
+// ProjectLanguage — aligned with ElevenLabs multilingual v2 (32 langs)
+// + the v3 Indic / South Asian additions we ship voices for.
+// Source: https://elevenlabs.io/docs/models#multilingual-v2 + v3 docs.
+// =====================================================================
 export type ProjectLanguage =
-  | 'ta'
-  | 'en'
-  | 'hi'
-  | 'kn'
-  | 'te'
-  | 'ml'
-  | 'bn'
-  | 'mr'
-  | 'gu'
-  | 'pa';
+  // Indic / South Asian
+  | 'ta' | 'hi' | 'kn' | 'te' | 'ml' | 'bn' | 'mr' | 'gu' | 'pa' | 'ur'
+  // Anglo / Western European
+  | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'nl'
+  // Northern / Central / Eastern European
+  | 'pl' | 'sv' | 'da' | 'fi' | 'no' | 'ro' | 'hu' | 'cs' | 'sk' | 'hr'
+  | 'bg' | 'el' | 'tr' | 'ru' | 'uk'
+  // MENA + East Asia + SE Asia
+  | 'ar' | 'zh' | 'ja' | 'ko' | 'vi' | 'id' | 'ms' | 'fil';
+
+export type ProjectStatus = 'draft' | 'queued' | 'running' | 'ready' | 'failed';
 export type InputMode = 'urls' | 'script' | 'topic' | 'research';
 export type ImageStyle = 'cartoon' | 'illustrated' | 'realistic' | 'ultra_realistic';
 
