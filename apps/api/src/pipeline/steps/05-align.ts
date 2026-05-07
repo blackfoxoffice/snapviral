@@ -76,14 +76,25 @@ export function chunkAlignment(
   return cues;
 }
 
+/**
+ * Build SRT subtitle file from per-cue narration text + start/end timestamps.
+ *
+ * The cues array comes from the alignment step — it walks ElevenLabs's
+ * character-level timing data over the joined scene narrations and groups
+ * adjacent characters into timed cues. So each subtitle line corresponds
+ * to a slice of an actual scene.narration string from the script.
+ *
+ * We prefix every line with {\an2} — ASS override tag for "bottom-center
+ * alignment". libass parses these tags when converting SRT to ASS at render
+ * time. This is a per-line position lock that overrides any default style.
+ *
+ * Subtitles are a SEPARATE OVERLAY layer in the final video composition —
+ * they do not pass through the image generation model. The image model
+ * (called by 03-images.ts) is forbidden from rendering any text.
+ */
 export function cuesToSrt(
   cues: { start: number; end: number; text: string }[],
 ): string {
-  // Prefix every line with {\an2} — ASS override tag for "bottom-center
-  // alignment". libass parses these tags when converting SRT to ASS at
-  // render time. This forces position regardless of any default style
-  // libass would otherwise pick when MarginV/Alignment from force_style
-  // get ignored.
   return cues
     .map(
       (c, i) =>
