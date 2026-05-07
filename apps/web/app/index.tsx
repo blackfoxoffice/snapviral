@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,10 @@ import {
   Check,
   Play,
   Sparkles,
-  Globe2,
   Film,
   Layers,
-  Wand2,
   Languages,
   Mic2,
-  PaletteIcon,
   Calendar,
 } from 'lucide-react-native';
 import { useAuth } from '../lib/auth';
@@ -89,21 +86,6 @@ const C = {
   amber: '#F59E0B',
 } as const;
 
-// Curated photographic backdrops (Unsplash CDN, hotlink-safe)
-const IMG = {
-  studio: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=1200&q=80&auto=format&fit=crop',
-  desk: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80&auto=format&fit=crop',
-  creator1: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&q=80&auto=format&fit=crop',
-  creator2: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400&h=400&q=80&auto=format&fit=crop',
-  creator3: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&q=80&auto=format&fit=crop',
-  creator4: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&q=80&auto=format&fit=crop',
-  creator5: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&q=80&auto=format&fit=crop',
-  cartoonGirl: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=600&q=80&auto=format&fit=crop',
-  film: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=1000&q=80&auto=format&fit=crop',
-  landscape: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1400&q=80&auto=format&fit=crop',
-  abstractRed: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1400&q=80&auto=format&fit=crop',
-} as const;
-
 // =====================================================================
 // Page
 // =====================================================================
@@ -134,9 +116,7 @@ export default function Index() {
     >
       <Nav ctx={ctx} />
       <Hero ctx={ctx} />
-      <SocialProof ctx={ctx} />
       <FeatureStack ctx={ctx} />
-      <DeepDiveCartoons ctx={ctx} />
       <DeepDiveShorts ctx={ctx} />
       <DeepDiveMultilang ctx={ctx} />
       <StatsBlock ctx={ctx} />
@@ -473,283 +453,63 @@ function Hero({ ctx }: { ctx: Ctx }) {
         </View>
       </View>
 
-      {/* Floating Mac mockup with dashboard */}
+      {/* Closing trust strip — replaces the dashboard mockup */}
       <View
         style={{
           paddingHorizontal: padX,
-          paddingBottom: isMobile ? 24 : 56,
+          paddingBottom: isMobile ? 64 : 96,
           alignItems: 'center',
           zIndex: 1,
-          ...({ animation: 'sv-rise-in 1200ms 500ms cubic-bezier(0.2,0.8,0.2,1) both' } as any),
+          ...({ animation: 'sv-fade-up 1200ms 600ms cubic-bezier(0.2,0.8,0.2,1) both' } as any),
         }}
       >
-        <MacMockup ctx={ctx} />
-      </View>
-    </View>
-  );
-}
-
-function MacMockup({ ctx }: { ctx: Ctx }) {
-  const { isMobile } = ctx;
-  return (
-    <View
-      style={{
-        maxWidth: 1100,
-        width: '100%',
-        borderRadius: isMobile ? 12 : 18,
-        backgroundColor: '#1A1A1C',
-        padding: isMobile ? 6 : 10,
-        ...({
-          boxShadow:
-            '0 60px 120px -40px rgba(0,0,0,0.7), 0 30px 60px -20px rgba(225,29,44,0.25), inset 0 1px 0 rgba(255,255,255,0.06)',
-        } as any),
-      }}
-    >
-      <View
-        style={{
-          borderRadius: isMobile ? 8 : 12,
-          backgroundColor: '#0F0F11',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Mac chrome */}
         <View
           style={{
-            height: isMobile ? 28 : 36,
-            flexDirection: 'row',
+            marginTop: isMobile ? 56 : 80,
+            paddingTop: isMobile ? 32 : 40,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255,255,255,0.10)',
+            width: '100%',
+            maxWidth: 980,
             alignItems: 'center',
-            paddingHorizontal: 14,
-            gap: 6,
-            backgroundColor: '#1A1A1C',
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255,255,255,0.06)',
           }}
         >
-          <View style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#FF5F57' }} />
-          <View style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#FEBC2E' }} />
-          <View style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#28C840' }} />
-          {!isMobile ? (
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <View
+          <Text
+            style={{
+              fontFamily: FONT.mono,
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.45)',
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+              marginBottom: 24,
+            }}
+          >
+            Trusted by media houses, agencies & independent studios
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: isMobile ? 24 : 56,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {['BHARAT WIRE', 'NORTH 24', 'TAMIL DAILY', 'INDIA PULSE', 'VOICE 360'].map((label) => (
+              <Text
+                key={label}
                 style={{
-                  paddingHorizontal: 12,
-                  height: 22,
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'row',
-                  gap: 6,
+                  fontFamily: FONT.serif,
+                  fontStyle: 'italic',
+                  fontWeight: '600',
+                  fontSize: isMobile ? 16 : 20,
+                  color: 'rgba(255,255,255,0.55)',
+                  letterSpacing: -0.4,
                 }}
               >
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.redHot, ...({ animation: 'sv-pulse-dot 1.6s ease-in-out infinite' } as any) }} />
-                <Text style={{ fontFamily: FONT.mono, fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
-                  app.snapviral.in / studio
-                </Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Studio body */}
-        <View style={{ flexDirection: 'row', minHeight: isMobile ? 320 : 540 }}>
-          {/* Sidebar */}
-          {!isMobile ? (
-            <View
-              style={{
-                width: 200,
-                backgroundColor: '#0A0A0C',
-                paddingVertical: 18,
-                paddingHorizontal: 12,
-                borderRightWidth: 1,
-                borderRightColor: 'rgba(255,255,255,0.04)',
-                gap: 4,
-              }}
-            >
-              {[
-                { l: 'Studio', a: true },
-                { l: 'Library' },
-                { l: 'Auto-publish', dot: true },
-                { l: 'YouTube' },
-                { l: 'Voice lab' },
-                { l: 'Cartoons' },
-                { l: 'Settings' },
-              ].map((it, i) => (
-                <View
-                  key={i}
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    backgroundColor: it.a ? 'rgba(255,45,64,0.16)' : 'transparent',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ fontFamily: FONT.sans, fontSize: 12, fontWeight: it.a ? '600' : '500', color: it.a ? '#FFFFFF' : 'rgba(255,255,255,0.6)' }}>
-                    {it.l}
-                  </Text>
-                  {it.dot ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} /> : null}
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          {/* Main canvas */}
-          <View style={{ flex: 1, padding: isMobile ? 14 : 24, gap: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <View>
-                <Text style={{ fontFamily: FONT.sans, fontSize: isMobile ? 14 : 16, fontWeight: '700', color: '#FFFFFF' }}>
-                  New scene
-                </Text>
-                <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                  studio · cartoon · 60s
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <View style={{ paddingHorizontal: 10, height: 28, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', justifyContent: 'center' }}>
-                  <Text style={{ fontFamily: FONT.sans, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Save draft</Text>
-                </View>
-                <View style={{ paddingHorizontal: 10, height: 28, borderRadius: 999, backgroundColor: C.red, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Play size={9} color="#FFFFFF" fill="#FFFFFF" />
-                  <Text style={{ fontFamily: FONT.sans, fontSize: 11, fontWeight: '600', color: '#FFFFFF' }}>Render</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Viewport */}
-            <View
-              style={{
-                aspectRatio: isMobile ? 16 / 9 : 16 / 8,
-                borderRadius: 10,
-                backgroundColor: '#1A1A1C',
-                overflow: 'hidden',
-                position: 'relative',
-                ...({
-                  backgroundImage:
-                    'linear-gradient(135deg, #2D1B0E 0%, #4A2820 35%, #3F1D1F 70%, #1A0A0E 100%)',
-                } as any),
-              }}
-            >
-              {/* Cartoon character placeholder */}
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: '15%',
-                  width: isMobile ? 72 : 140,
-                  height: isMobile ? 110 : 200,
-                  ...({ animation: 'sv-float 4s ease-in-out infinite' } as any),
-                }}
-              >
-                <View
-                  style={{
-                    width: '100%',
-                    aspectRatio: 0.7,
-                    borderRadius: 999,
-                    ...({
-                      backgroundImage: 'radial-gradient(circle at 50% 30%, #FFD7B5 0%, #E8A87C 100%)',
-                    } as any),
-                  }}
-                />
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: '12%',
-                    left: '32%',
-                    width: '8%',
-                    height: '6%',
-                    borderRadius: 999,
-                    backgroundColor: '#0A0A0B',
-                  }}
-                />
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: '12%',
-                    left: '60%',
-                    width: '8%',
-                    height: '6%',
-                    borderRadius: 999,
-                    backgroundColor: '#0A0A0B',
-                  }}
-                />
-              </View>
-
-              {/* Caption */}
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 14,
-                  left: 0,
-                  right: 0,
-                  alignItems: 'center',
-                }}
-              >
-                <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                  <Text style={{ fontFamily: FONT.sans, fontSize: isMobile ? 10 : 13, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                    Once upon a Tuesday in Chennai...
-                  </Text>
-                </View>
-              </View>
-
-              {/* Play badge */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 14,
-                  left: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingHorizontal: 8,
-                  height: 22,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(0,0,0,0.55)',
-                }}
-              >
-                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.redHot, ...({ animation: 'sv-pulse-dot 1.6s ease-in-out infinite' } as any) }} />
-                <Text style={{ fontFamily: FONT.mono, fontSize: 9, color: '#FFFFFF', letterSpacing: 0.5, fontWeight: '600' }}>
-                  REC · 0:24
-                </Text>
-              </View>
-            </View>
-
-            {/* Timeline strip */}
-            <View
-              style={{
-                borderRadius: 10,
-                backgroundColor: '#1A1A1C',
-                padding: 10,
-                gap: 8,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.04)',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: 1, textTransform: 'uppercase' }}>
-                  timeline · 6 scenes
-                </Text>
-                <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: 'rgba(255,255,255,0.55)', fontVariant: ['tabular-nums'] as any }}>
-                  00:24 / 00:60
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
-                {[0.6, 1, 0.4, 0.8, 0.5, 0.7].map((w, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      flex: w,
-                      height: isMobile ? 22 : 32,
-                      borderRadius: 4,
-                      backgroundColor: i === 1 ? C.red : 'rgba(255,255,255,0.10)',
-                      ...(i === 1 ? ({ boxShadow: '0 0 0 2px rgba(225,29,44,0.30)' } as any) : {}),
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
+                {label}
+              </Text>
+            ))}
           </View>
         </View>
       </View>
@@ -757,169 +517,6 @@ function MacMockup({ ctx }: { ctx: Ctx }) {
   );
 }
 
-// =====================================================================
-// SOCIAL PROOF
-// =====================================================================
-function SocialProof({ ctx }: { ctx: Ctx }) {
-  const { isMobile, padX } = ctx;
-  return (
-    <View
-      style={{
-        backgroundColor: C.warm,
-        paddingHorizontal: padX,
-        paddingTop: isMobile ? 56 : 96,
-        paddingBottom: isMobile ? 56 : 96,
-        borderBottomWidth: 1,
-        borderBottomColor: C.hair,
-      }}
-    >
-      <View style={{ maxWidth: 1280, width: '100%', alignSelf: 'center', alignItems: 'center' }}>
-        <View
-          style={{
-            paddingHorizontal: 12,
-            height: 26,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: C.hairline,
-            backgroundColor: C.paper,
-            justifyContent: 'center',
-            marginBottom: 24,
-          }}
-        >
-          <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: C.muted, letterSpacing: 1.2 }}>
-            POWERING THE WORLD'S
-          </Text>
-        </View>
-        <Text
-          style={{
-            fontFamily: FONT.sans,
-            fontSize: isMobile ? 28 : 48,
-            lineHeight: isMobile ? 32 : 54,
-            fontWeight: '700',
-            color: C.ink,
-            letterSpacing: isMobile ? -1.2 : -2.2,
-            textAlign: 'center',
-            maxWidth: 800,
-            marginBottom: isMobile ? 32 : 56,
-          }}
-        >
-          most ambitious{' '}
-          <Text style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontWeight: '500' }}>creator channels</Text>
-        </Text>
-
-        {/* Floating creator avatars */}
-        <CreatorOrbit ctx={ctx} />
-      </View>
-    </View>
-  );
-}
-
-function CreatorOrbit({ ctx }: { ctx: Ctx }) {
-  const { isMobile } = ctx;
-  const cards = [
-    { src: IMG.creator1, name: 'Priya M.', subs: '142K', tag: 'Tamil news', color: C.red, delay: 0 },
-    { src: IMG.creator2, name: 'Vignesh K.', subs: '88K', tag: 'Cartoons', color: C.blue, delay: 120 },
-    { src: IMG.creator3, name: 'Rahul S.', subs: '210K', tag: 'Tech shorts', color: C.purple, delay: 240 },
-    { src: IMG.creator4, name: 'Aisha N.', subs: '64K', tag: 'Hindi essays', color: C.amber, delay: 360 },
-    { src: IMG.creator5, name: 'Karthik R.', subs: '320K', tag: 'Long-form', color: C.green, delay: 480 },
-  ];
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 14,
-        justifyContent: 'center',
-        maxWidth: 980,
-      }}
-    >
-      {cards.map((c, i) => (
-        <CreatorCard key={i} {...c} isMobile={isMobile} />
-      ))}
-    </View>
-  );
-}
-
-function CreatorCard({
-  src,
-  name,
-  subs,
-  tag,
-  color,
-  delay,
-  isMobile,
-}: {
-  src: string;
-  name: string;
-  subs: string;
-  tag: string;
-  color: string;
-  delay: number;
-  isMobile: boolean;
-}) {
-  const [hover, setHover] = useState(false);
-  return (
-    <Pressable
-      onHoverIn={() => setHover(true)}
-      onHoverOut={() => setHover(false)}
-      style={{
-        flexBasis: isMobile ? '47%' : 180,
-        flexGrow: 0,
-        backgroundColor: C.paper,
-        borderRadius: 18,
-        padding: 18,
-        borderWidth: 1,
-        borderColor: C.hairline,
-        alignItems: 'center',
-        transform: [{ translateY: hover ? -8 : 0 }] as any,
-        ...({
-          transition: 'transform 350ms cubic-bezier(0.2,0.8,0.2,1), box-shadow 350ms ease',
-          boxShadow: hover
-            ? `0 20px 40px -20px ${color}55`
-            : '0 1px 0 rgba(10,10,11,0.04), 0 2px 8px rgba(10,10,11,0.04)',
-          animation: `sv-rise-in 700ms ${delay}ms cubic-bezier(0.2,0.8,0.2,1) both`,
-        } as any),
-      }}
-    >
-      <View
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          marginBottom: 12,
-          overflow: 'hidden',
-          borderWidth: 2,
-          borderColor: color,
-          ...({ boxShadow: `0 0 0 4px ${color}22` } as any),
-        }}
-      >
-        <Image source={{ uri: src }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-      </View>
-      <Text style={{ fontFamily: FONT.sans, fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 2 }}>
-        {name}
-      </Text>
-      <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: color, fontWeight: '600', letterSpacing: 0.5, marginBottom: 6 }}>
-        {tag.toUpperCase()}
-      </Text>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 4,
-          paddingHorizontal: 8,
-          height: 22,
-          borderRadius: 999,
-          backgroundColor: C.surface,
-        }}
-      >
-        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FF0000' }} />
-        <Text style={{ fontFamily: FONT.sans, fontSize: 11, fontWeight: '600', color: C.body }}>
-          {subs} subs
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 // =====================================================================
 // FEATURE STACK
@@ -957,8 +554,8 @@ function FeatureStack({ ctx }: { ctx: Ctx }) {
             spanCols={cols === 3 ? 1 : cols === 2 ? 1 : 1}
             color={C.red}
             Icon={Sparkles}
-            title="Cartoon scenes"
-            body="Pick a character, type a story, get a 30-second animated short. Lip-synced narration in any language."
+            title="Storyboards"
+            body="Type a script. Get a six-scene storyboard with cinematic visuals, native voiceover and a tight 30-second cut."
             visual={<TileVisualCartoon />}
           />
           <FeatureTile
@@ -1086,29 +683,75 @@ function FeatureTile({
 // Tile visuals — actual product mock-style elements
 
 function TileVisualCartoon() {
+  // Storyboard panels — six mature gradient scenes laid out like a film strip.
+  const scenes = [
+    'linear-gradient(140deg, #1F2937 0%, #2D1B0E 40%, #C8102E 100%)',
+    'linear-gradient(140deg, #18181B 0%, #2D1B0E 50%, #4A1820 100%)',
+    'linear-gradient(140deg, #1A0E1F 0%, #3F1D52 50%, #7C3AED 100%)',
+    'linear-gradient(140deg, #0F172A 0%, #1E3A8A 50%, #2563EB 100%)',
+    'linear-gradient(140deg, #0A0A0B 0%, #1A1A1C 50%, #2D2D30 100%)',
+    'linear-gradient(140deg, #1F2937 0%, #4A2820 50%, #FF2D40 100%)',
+  ];
   return (
     <View
       style={{
         flex: 1,
-        ...({
-          backgroundImage:
-            'radial-gradient(circle at 30% 40%, #FFD7B5 0%, #FFB088 40%, #C8102E 100%)',
-        } as any),
-        position: 'relative',
-        overflow: 'hidden',
+        backgroundColor: '#0A0A0B',
+        padding: 14,
+        gap: 8,
       }}
     >
-      {/* Cartoon character */}
-      <View style={{ position: 'absolute', bottom: -20, left: '50%', marginLeft: -40, width: 80, height: 110, ...({ animation: 'sv-float 3.5s ease-in-out infinite' } as any) }}>
-        <View style={{ width: '100%', aspectRatio: 0.7, borderRadius: 999, backgroundColor: '#FFE0C7', borderWidth: 2, borderColor: '#0A0A0B' }} />
-        <View style={{ position: 'absolute', top: '20%', left: '28%', width: 8, height: 8, borderRadius: 4, backgroundColor: '#0A0A0B' }} />
-        <View style={{ position: 'absolute', top: '20%', right: '28%', width: 8, height: 8, borderRadius: 4, backgroundColor: '#0A0A0B' }} />
-        <View style={{ position: 'absolute', top: '38%', left: '38%', width: 16, height: 6, borderRadius: 3, backgroundColor: '#E11D2C' }} />
-      </View>
-      <View style={{ position: 'absolute', top: 12, left: 12, paddingHorizontal: 8, height: 22, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.85)', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: FONT.mono, fontSize: 9, fontWeight: '700', color: C.ink, letterSpacing: 0.8 }}>
-          CARTOON · 30s
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text
+          style={{
+            fontFamily: FONT.mono,
+            fontSize: 9,
+            color: 'rgba(255,255,255,0.45)',
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+          }}
+        >
+          storyboard · 6 scenes
         </Text>
+        <View
+          style={{
+            paddingHorizontal: 6,
+            height: 16,
+            borderRadius: 999,
+            backgroundColor: 'rgba(225,29,44,0.18)',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ fontFamily: FONT.mono, fontSize: 8, color: C.redHot, fontWeight: '700', letterSpacing: 0.5 }}>
+            30s
+          </Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+        {scenes.map((g, i) => (
+          <View
+            key={i}
+            style={{
+              flexBasis: '32%',
+              flexGrow: 1,
+              aspectRatio: 16 / 10,
+              borderRadius: 5,
+              ...({ backgroundImage: g } as any),
+              padding: 4,
+              justifyContent: 'space-between',
+              borderWidth: i === 1 ? 1.5 : 0,
+              borderColor: C.redHot,
+              ...(i === 1 ? ({ boxShadow: '0 0 0 2px rgba(225,29,44,0.30)' } as any) : {}),
+            }}
+          >
+            <Text style={{ fontFamily: FONT.mono, fontSize: 7, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>
+              0{i + 1}
+            </Text>
+            {i === 1 ? (
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.redHot, alignSelf: 'flex-end' }} />
+            ) : null}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -1273,171 +916,6 @@ function TileVisualLongform() {
 // =====================================================================
 // DEEP DIVES (alternating left/right)
 // =====================================================================
-function DeepDiveCartoons({ ctx }: { ctx: Ctx }) {
-  const { isMobile, padX } = ctx;
-  return (
-    <View style={{ paddingHorizontal: padX, paddingVertical: isMobile ? 64 : 120, backgroundColor: C.warm, borderTopWidth: 1, borderTopColor: C.hair }}>
-      <View
-        style={{
-          maxWidth: 1280,
-          width: '100%',
-          alignSelf: 'center',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? 32 : 80,
-          alignItems: 'center',
-        }}
-      >
-        <View style={{ flex: 1, width: '100%' }}>
-          <SectionEyebrow color={C.purple}>Cartoon scenes</SectionEyebrow>
-          <Text
-            style={{
-              fontFamily: FONT.sans,
-              fontSize: isMobile ? 32 : 56,
-              lineHeight: isMobile ? 36 : 62,
-              fontWeight: '700',
-              color: C.ink,
-              letterSpacing: isMobile ? -1.4 : -2.4,
-              marginTop: 14,
-              marginBottom: 18,
-            }}
-          >
-            Type a story.{'\n'}
-            <Text style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontWeight: '500', color: C.purple }}>
-              Animate it
-            </Text>{' '}
-            in 4 minutes.
-          </Text>
-          <Text style={{ fontFamily: FONT.sans, fontSize: isMobile ? 16 : 18, lineHeight: isMobile ? 24 : 28, color: C.body, maxWidth: 480, marginBottom: 24 }}>
-            Pick from 40+ cartoon characters. Drop in a script — or let SnapViral write one. Get a
-            lip-synced animated scene with native voiceover, sound effects, and brand-safe music.
-            Perfect for kids' stories, explainers, and viral hooks.
-          </Text>
-          <View style={{ gap: 12 }}>
-            {['40+ cartoon styles · ages 4 to 80', 'Lip-sync in Tamil, Hindi & English', 'Royalty-free music & SFX', 'Brand kit: your colors, logo, font'].map((f, i) => (
-              <BulletItem key={i} text={f} />
-            ))}
-          </View>
-        </View>
-
-        <View style={{ flex: 1, width: '100%' }}>
-          <CartoonStudioMockup ctx={ctx} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function CartoonStudioMockup({ ctx }: { ctx: Ctx }) {
-  return (
-    <View
-      style={{
-        borderRadius: 20,
-        backgroundColor: C.paper,
-        borderWidth: 1,
-        borderColor: C.hairline,
-        overflow: 'hidden',
-        ...({ boxShadow: '0 30px 60px -30px rgba(124,58,237,0.30), 0 1px 0 rgba(10,10,11,0.04)' } as any),
-      }}
-    >
-      {/* Stage */}
-      <View
-        style={{
-          aspectRatio: 16 / 10,
-          ...({
-            backgroundImage: 'linear-gradient(135deg, #FCE7F3 0%, #DDD6FE 50%, #BFDBFE 100%)',
-          } as any),
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Stage props */}
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', backgroundColor: 'rgba(255,255,255,0.2)' }} />
-        {/* Sun */}
-        <View style={{ position: 'absolute', top: 30, right: 40, width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFD60A', ...({ boxShadow: '0 0 40px rgba(255,214,10,0.6)' } as any) }} />
-        {/* Cartoon characters */}
-        <View style={{ position: 'absolute', bottom: '15%', left: '20%', ...({ animation: 'sv-float 3.5s ease-in-out infinite' } as any) }}>
-          <CartoonChar primary="#F472B6" secondary="#FFE0C7" size={ctx.isMobile ? 80 : 120} />
-        </View>
-        <View style={{ position: 'absolute', bottom: '15%', right: '20%', ...({ animation: 'sv-float 4s ease-in-out infinite', animationDelay: '0.5s' } as any) }}>
-          <CartoonChar primary="#60A5FA" secondary="#FFE0C7" size={ctx.isMobile ? 80 : 120} />
-        </View>
-        {/* Speech bubble */}
-        <View
-          style={{
-            position: 'absolute',
-            top: '20%',
-            left: '50%',
-            marginLeft: -100,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            backgroundColor: '#FFFFFF',
-            borderRadius: 16,
-            borderWidth: 2,
-            borderColor: C.ink,
-            ...({ animation: 'sv-bounce 2s ease-in-out infinite' } as any),
-          }}
-        >
-          <Text style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 14, fontWeight: '600', color: C.ink }}>
-            Once upon a time...
-          </Text>
-        </View>
-      </View>
-
-      {/* Controls */}
-      <View style={{ padding: 16, gap: 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.hair }}>
-            <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: C.muted, marginBottom: 2 }}>STORY</Text>
-            <Text style={{ fontFamily: FONT.sans, fontSize: 12, color: C.ink, fontWeight: '500' }}>
-              The little fox who learned to share...
-            </Text>
-          </View>
-          <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center' }}>
-            <Wand2 size={14} color="#FFFFFF" />
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          {[C.red, C.purple, C.blue, C.green, C.amber].map((c, i) => (
-            <View
-              key={i}
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 6,
-                backgroundColor: c,
-                borderWidth: i === 1 ? 2 : 0,
-                borderColor: C.ink,
-              }}
-            />
-          ))}
-          <View style={{ flex: 1 }} />
-          <View style={{ paddingHorizontal: 10, height: 24, borderRadius: 999, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }}>
-            <Play size={9} color={C.ink} fill={C.ink} />
-            <Text style={{ fontFamily: FONT.mono, fontSize: 10, color: C.ink, fontWeight: '600' }}>0:14</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function CartoonChar({ primary, secondary, size }: { primary: string; secondary: string; size: number }) {
-  return (
-    <View style={{ width: size, height: size * 1.2 }}>
-      {/* Body */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', borderRadius: size / 3, backgroundColor: primary, borderWidth: 2, borderColor: C.ink }} />
-      {/* Head */}
-      <View style={{ position: 'absolute', top: 0, left: '15%', right: '15%', aspectRatio: 1, borderRadius: size, backgroundColor: secondary, borderWidth: 2, borderColor: C.ink }}>
-        {/* Eyes */}
-        <View style={{ position: 'absolute', top: '35%', left: '25%', width: 6, height: 6, borderRadius: 3, backgroundColor: C.ink }} />
-        <View style={{ position: 'absolute', top: '35%', right: '25%', width: 6, height: 6, borderRadius: 3, backgroundColor: C.ink }} />
-        {/* Smile */}
-        <View style={{ position: 'absolute', top: '55%', left: '35%', right: '35%', height: 3, borderBottomLeftRadius: 999, borderBottomRightRadius: 999, borderBottomWidth: 2, borderColor: C.ink }} />
-      </View>
-    </View>
-  );
-}
-
 function DeepDiveShorts({ ctx }: { ctx: Ctx }) {
   const { isMobile, padX } = ctx;
   return (
@@ -1941,141 +1419,69 @@ function PromoBlock({ ctx }: { ctx: Ctx }) {
 
         <View
           style={{
-            flexDirection: isMobile ? 'column' : 'row',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            gap: 32,
+            alignItems: 'center',
             zIndex: 1,
           }}
         >
-          <View style={{ flex: 1 }}>
-            <View
-              style={{
-                paddingHorizontal: 12,
-                height: 28,
-                borderRadius: 999,
-                backgroundColor: 'rgba(255,255,255,0.06)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.12)',
-                alignSelf: 'flex-start',
-                justifyContent: 'center',
-                marginBottom: 18,
-              }}
-            >
-              <Text style={{ fontFamily: FONT.mono, fontSize: 11, color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5, fontWeight: '500' }}>
-                STREAMLINE YOUR
-              </Text>
-            </View>
-            <Text
-              style={{
-                fontFamily: FONT.sans,
-                fontSize: isMobile ? 36 : 64,
-                lineHeight: isMobile ? 40 : 70,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                letterSpacing: isMobile ? -1.4 : -2.6,
-                marginBottom: 18,
-              }}
-            >
-              YouTube content{'\n'}
-              <Text style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontWeight: '500', color: C.redHot }}>
-                infrastructure.
-              </Text>
-            </Text>
-            <Text style={{ fontFamily: FONT.sans, fontSize: 17, lineHeight: 26, color: 'rgba(255,255,255,0.7)', maxWidth: 520, marginBottom: 28 }}>
-              Scripts, cartoons, voiceovers, scheduling, publishing — all in one studio. Built for
-              creators who'd rather create than edit.
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <CTA inverse onPress={() => router.push('/signup')}>
-                Start free
-              </CTA>
-              <CTA ghost onPress={() => router.push('/blog' as any)}>
-                Read the blog
-              </CTA>
-            </View>
-          </View>
-
-          {!isMobile ? (
-            <View style={{ width: 320, height: 240 }}>
-              <PromoMockup />
-            </View>
-          ) : null}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function PromoMockup() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-        padding: 14,
-        gap: 8,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.redHot, ...({ animation: 'sv-pulse-dot 1.6s ease-in-out infinite' } as any) }} />
-        <Text style={{ fontFamily: FONT.mono, fontSize: 9, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 }}>
-          studio · live
-        </Text>
-        <View style={{ flex: 1 }} />
-        <Text style={{ fontFamily: FONT.mono, fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>
-          5 of 5 ready
-        </Text>
-      </View>
-
-      {[
-        { l: 'Cartoon · The little fox', t: 'TA', v: '0:30', s: 'done' as const },
-        { l: 'Short · WWDC top 5', t: 'EN', v: '0:24', s: 'done' as const },
-        { l: 'Essay · Tamil farmers law', t: 'TA', v: '8:14', s: 'done' as const },
-        { l: 'Short · दिल्ली का मौसम', t: 'HI', v: '0:18', s: 'done' as const },
-        { l: 'Cartoon · The kite story', t: 'EN', v: '0:30', s: 'rendering' as const },
-      ].map((row, i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 8,
-            paddingVertical: 6,
-            borderRadius: 8,
-            backgroundColor: 'rgba(255,255,255,0.04)',
-          }}
-        >
           <View
             style={{
-              width: 18,
-              height: 18,
-              borderRadius: 4,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              alignItems: 'center',
+              paddingHorizontal: 12,
+              height: 28,
+              borderRadius: 999,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.12)',
               justifyContent: 'center',
+              marginBottom: 24,
             }}
           >
-            <Text style={{ fontFamily: FONT.mono, fontSize: 8, color: '#FFFFFF', fontWeight: '700' }}>{row.t}</Text>
+            <Text style={{ fontFamily: FONT.mono, fontSize: 11, color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5, fontWeight: '500' }}>
+              STREAMLINE YOUR
+            </Text>
           </View>
-          <Text style={{ flex: 1, fontFamily: FONT.sans, fontSize: 11, color: '#FFFFFF', fontWeight: '500' }} numberOfLines={1}>
-            {row.l}
-          </Text>
-          <Text style={{ fontFamily: FONT.mono, fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{row.v}</Text>
-          <View
+          <Text
             style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: row.s === 'done' ? '#22C55E' : C.redHot,
-              ...(row.s === 'rendering' ? ({ animation: 'sv-pulse-dot 1.6s ease-in-out infinite' } as any) : {}),
+              fontFamily: FONT.sans,
+              fontSize: isMobile ? 36 : 72,
+              lineHeight: isMobile ? 40 : 78,
+              fontWeight: '700',
+              color: '#FFFFFF',
+              letterSpacing: isMobile ? -1.4 : -3,
+              marginBottom: 22,
+              textAlign: 'center',
+              maxWidth: 920,
             }}
-          />
+          >
+            Video content{' '}
+            <Text style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontWeight: '500', color: C.redHot }}>
+              infrastructure
+            </Text>
+            , in one studio.
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONT.sans,
+              fontSize: isMobile ? 16 : 18,
+              lineHeight: isMobile ? 24 : 28,
+              color: 'rgba(255,255,255,0.65)',
+              textAlign: 'center',
+              maxWidth: 580,
+              marginBottom: 32,
+            }}
+          >
+            Scripting, voiceover, scheduling, publishing — every step you'd otherwise outsource,
+            handled by one quiet pipeline. Built for studios that ship daily.
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <CTA inverse onPress={() => router.push('/signup')}>
+              Start free
+            </CTA>
+            <CTA ghost onPress={() => router.push('/blog' as any)}>
+              Read the journal
+            </CTA>
+          </View>
         </View>
-      ))}
+      </View>
     </View>
   );
 }
