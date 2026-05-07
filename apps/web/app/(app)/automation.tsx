@@ -230,6 +230,7 @@ export default function AutomationPage() {
             used={status.used_today}
             queueSize={unused.length}
             enabled={local.auto_publish_enabled}
+            isMobile={isMobile}
           />
         ) : null}
 
@@ -768,20 +769,29 @@ function DailyProgress({
   used,
   queueSize,
   enabled,
+  isMobile,
 }: {
   limit: number;
   used: number;
   queueSize: number;
   enabled: boolean;
+  isMobile: boolean;
 }) {
   const remaining = Math.max(0, limit - used);
   const days = limit > 0 ? Math.ceil(queueSize / limit) : 0;
   return (
     <View
-      className="rounded-2xl p-5 flex-row items-center gap-4"
-      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E4E7' }}
+      className="rounded-2xl p-5"
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E4E4E7',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? 16 : 16,
+      }}
     >
-      <View className="flex-1">
+      <View style={{ flex: 1 }}>
         <Text className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider mb-1">
           Today
         </Text>
@@ -796,7 +806,16 @@ function DailyProgress({
             : 'Auto-publish is OFF'}
         </Text>
       </View>
-      <View className="flex-1 border-l border-surface-border pl-4">
+      <View
+        style={{
+          flex: 1,
+          paddingLeft: isMobile ? 0 : 16,
+          paddingTop: isMobile ? 16 : 0,
+          borderLeftWidth: isMobile ? 0 : 1,
+          borderTopWidth: isMobile ? 1 : 0,
+          borderColor: '#E4E4E7',
+        }}
+      >
         <Text className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider mb-1">
           Queue
         </Text>

@@ -187,33 +187,71 @@ export function Sidebar() {
   );
 }
 
+// Compact bottom-tab bar for mobile. Only the 5 items that matter most.
+const MOBILE_TABS: NavItem[] = [
+  { href: '/dashboard', label: 'Home', Icon: LayoutGrid },
+  { href: '/library', label: 'Library', Icon: Library },
+  { href: '/projects/new', label: 'New', Icon: Plus },
+  { href: '/automation', label: 'Auto', Icon: Zap },
+  { href: '/settings', label: 'Settings', Icon: Settings },
+];
+
 export function BottomTabs() {
   const pathname = usePathname();
   const router = useRouter();
   const { width } = useWindowDimensions();
   if (width >= 768) return null;
 
-  const items = NAV.filter((n) => !n.disabled);
   return (
     <View
-      className="flex-row items-center justify-around border-t border-surface-border bg-surface-sunken"
-      style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, paddingBottom: 4 }}
+      className="flex-row items-stretch border-t border-surface-border bg-surface-sunken"
+      style={{
+        position: 'sticky' as any,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        paddingBottom: 'env(safe-area-inset-bottom)' as any,
+      }}
     >
-      {items.map((item) => {
+      {MOBILE_TABS.map((item) => {
         const active =
           pathname === item.href ||
           (item.href !== '/dashboard' && pathname.startsWith(item.href));
         const Icon = item.Icon;
+        const accentNew = item.href === '/projects/new';
         return (
           <Pressable
             key={item.href}
             onPress={() => router.push(item.href as any)}
-            className="items-center justify-center py-2 px-2"
-            style={{ minWidth: 56 }}
+            className="flex-1 items-center justify-center py-2"
+            style={{ minHeight: 56 }}
           >
-            <Icon size={20} color={active ? '#E53935' : '#78909C'} strokeWidth={active ? 2 : 1.5} />
+            {accentNew ? (
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  backgroundColor: '#E53935',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 2,
+                }}
+              >
+                <Icon size={18} color="#FFFFFF" strokeWidth={2.4} />
+              </View>
+            ) : (
+              <Icon
+                size={20}
+                color={active ? '#E53935' : '#78909C'}
+                strokeWidth={active ? 2 : 1.6}
+              />
+            )}
             <Text
-              className={`text-[10px] mt-1 ${active ? 'text-brand font-semibold' : 'text-ink-muted'}`}
+              className={`text-[10px] mt-0.5 ${
+                active ? 'text-brand font-semibold' : accentNew ? 'text-ink' : 'text-ink-muted'
+              }`}
             >
               {item.label}
             </Text>

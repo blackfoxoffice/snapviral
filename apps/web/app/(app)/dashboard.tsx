@@ -118,31 +118,39 @@ export default function Dashboard() {
                   'linear-gradient(180deg, rgba(229,57,53,0.025) 0%, rgba(255,255,255,1) 60%)' as any,
               }}
             >
-              <View className={`${isMobile ? 'gap-0' : 'flex-row'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <HeroMetric
                   number={stats?.ready_projects ?? 0}
                   label="videos ready"
                   accent="#10B981"
                   isMobile={isMobile}
-                  first
+                  position={0}
                 />
                 <HeroMetric
                   number={stats?.published_to_youtube ?? 0}
                   label="published"
                   accent="#E53935"
                   isMobile={isMobile}
+                  position={1}
                 />
                 <HeroMetric
                   number={formatDuration(stats?.total_voiceover_seconds ?? 0)}
                   label="total content"
                   accent="#3B82F6"
                   isMobile={isMobile}
+                  position={2}
                 />
                 <HeroMetric
                   number={stats?.created_this_month ?? 0}
                   label="this month"
                   accent="#F59E0B"
                   isMobile={isMobile}
+                  position={3}
                 />
               </View>
             </View>
@@ -276,33 +284,44 @@ function HeroMetric({
   label,
   accent,
   isMobile,
-  first,
+  position,
 }: {
   number: number | string;
   label: string;
   accent: string;
   isMobile: boolean;
-  first?: boolean;
+  position: number;
 }) {
+  // Mobile: 2x2 grid (top row = positions 0,1 / bottom row = 2,3).
+  // Desktop: single row of 4 separated by left borders.
+  const mobileBorderTop = isMobile && position >= 2;
+  const mobileBorderLeft = isMobile && position % 2 === 1;
+  const desktopBorderLeft = !isMobile && position > 0;
   return (
     <View
-      className="flex-1 py-4"
       style={{
-        paddingHorizontal: isMobile ? 16 : 20,
-        borderLeftWidth: isMobile || first ? 0 : 1,
-        borderTopWidth: !isMobile || first ? 0 : 1,
+        flexBasis: isMobile ? '50%' : '25%',
+        paddingHorizontal: isMobile ? 14 : 20,
+        paddingVertical: 14,
+        borderTopWidth: mobileBorderTop ? 1 : 0,
+        borderLeftWidth: mobileBorderLeft || desktopBorderLeft ? 1 : 0,
         borderColor: '#E4E4E7',
       }}
     >
       <Text
-        className="text-[24px] font-bold text-ink"
-        style={{ fontVariant: ['tabular-nums'], letterSpacing: -0.5 }}
+        style={{
+          fontSize: isMobile ? 22 : 26,
+          fontWeight: '700',
+          color: '#0F172A',
+          fontVariant: ['tabular-nums'] as any,
+          letterSpacing: -0.6,
+        }}
       >
         {number}
       </Text>
-      <View className="flex-row items-center gap-1.5 mt-0.5">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
-        <Text className="text-[11px] text-ink-muted">{label}</Text>
+        <Text style={{ fontSize: 11, color: '#64748B' }}>{label}</Text>
       </View>
     </View>
   );
