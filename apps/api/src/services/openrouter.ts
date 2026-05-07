@@ -27,7 +27,8 @@ Output strict JSON matching this schema:
 Rules for every scene:
 - 4–7 scenes total, one focused thought each, 1–3 sentences of narration.
 - Target total spoken duration: ~${durationSeconds} seconds (~${targetWords} words across all scenes).
-- visual_prompt describes a cinematic 9:16 photograph that illustrates the scene. Be specific: location, subject, mood, lighting, composition. Photorealistic, documentary-news style. No text overlays in the image — text goes in the subtitle layer.
+- visual_prompt describes a cinematic 9:16 photograph that illustrates the scene. Be specific: location, subject, mood, lighting, composition. Photorealistic, documentary-news style.
+- ABSOLUTELY NO text in visual_prompt. Do NOT mention "signs", "captions", "headlines", "newspapers", "banners with text", "billboards", "name tags", "screens showing X", "papers reading Y", or any element that would cause the image model to render letters/words. If the scene needs signage to make sense, describe the surrounding context without the text — e.g. "a busy market street" not "a market street with shop signs reading X". All text in the final video lives in the subtitle layer; the image must contain zero written characters.
 - Output ONLY the JSON. No preamble, no markdown fences.`;
 
   if (mode === 'urls') {
@@ -325,23 +326,38 @@ const IMAGE_STYLE_PREFIX: Record<ImageStyle, string> = {
 
 // Cultural/regional context tied to the script's language. Keeps subjects,
 // locations, and visual references consistent with where the audience lives.
-// Critical bit: ANY in-image text must be in the script's native script
-// (Tamil/Devanagari) — the image model otherwise defaults to English.
+// We intentionally do NOT ask for language-specific signage — image models
+// misspell almost any non-Latin text (especially in cartoon style). All text
+// belongs in the subtitle/overlay layer, not in the pixels.
 const IMAGE_LANGUAGE_CONTEXT: Record<ProjectLanguage, string> = {
-  ta:
-    'South Indian / Tamil Nadu setting and aesthetic. Indian people, Tamil signage and visual culture (Chennai, Madurai, Kerala adjacent). Any visible text in the image must be in Tamil script (தமிழ்), not English or Latin alphabet. ',
-  hi:
-    'North Indian / Indian setting and aesthetic. Indian people, Devanagari signage, Indian streets and architecture (Delhi, Mumbai, Bengaluru). Any visible text in the image must be in Hindi / Devanagari script (हिन्दी), not English or Latin alphabet. ',
-  en:
-    'International / global newsroom aesthetic. Subjects appropriate to the headline. Any in-image text in clean English. ',
+  ta: 'South Indian / Tamil Nadu setting and aesthetic. Indian people, Indian streets and architecture (Chennai, Madurai, Kerala adjacent). ',
+  hi: 'North Indian / Indian setting and aesthetic. Indian people, Indian streets and architecture (Delhi, Mumbai, Bengaluru). ',
+  en: 'International / global newsroom aesthetic. Subjects appropriate to the headline. ',
 };
+
+// Hard-coded across every image, every style, every language: NO TEXT.
+// Image models can't reliably spell — especially Tamil/Devanagari, but also
+// frequently in English cartoon style. Subtitles handle all text.
+const NO_TEXT_RULE =
+  ' STRICT RULE: do not render any text, words, letters, numbers, captions, ' +
+  'logos, headlines, signage, billboards, newspaper text, screen text, name ' +
+  "tags, labels, or watermarks anywhere in the image. The image must be " +
+  'completely free of any written characters in any language or script. ' +
+  'Show people, places, objects, and scenes only. Any signs, screens, ' +
+  'newspapers, or banners visible in the frame must appear blank, blurred, ' +
+  'or out of focus. ';
 
 export function getStyledVisualPrompt(
   visualPrompt: string,
   imageStyle: ImageStyle,
   language: ProjectLanguage,
 ): string {
-  return IMAGE_STYLE_PREFIX[imageStyle] + IMAGE_LANGUAGE_CONTEXT[language] + visualPrompt;
+  return (
+    IMAGE_STYLE_PREFIX[imageStyle] +
+    IMAGE_LANGUAGE_CONTEXT[language] +
+    NO_TEXT_RULE +
+    visualPrompt
+  );
 }
 
 export async function callNanoBananaImage(visualPrompt: string): Promise<Buffer> {

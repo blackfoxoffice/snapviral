@@ -125,6 +125,7 @@ export async function runPipeline(projectId: string): Promise<void> {
           durationSeconds: typed.duration_seconds,
           logoPath: typed.logo_path,
           title: typed.title,
+          language: typed.language as ProjectLanguage,
         }),
       100,
     );

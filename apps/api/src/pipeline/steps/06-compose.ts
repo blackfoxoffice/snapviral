@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import type { ElevenLabsAlignment, Scene } from '@newsflow/shared';
+import type { ElevenLabsAlignment, ProjectLanguage, Scene } from '@newsflow/shared';
 import { composeFinalVideoFiles, computeSceneDurations } from '../../services/composer.js';
 import { getServiceClient } from '../../services/supabase.js';
 
@@ -16,6 +16,7 @@ interface ComposeArgs {
   durationSeconds: number;
   logoPath?: string | null;
   title?: string;
+  language: ProjectLanguage;
 }
 
 export async function composeFinalVideo(args: ComposeArgs): Promise<string> {
@@ -30,6 +31,7 @@ export async function composeFinalVideo(args: ComposeArgs): Promise<string> {
     durationSeconds,
     logoPath,
     title,
+    language,
   } = args;
 
   if (imagePaths.length !== scenes.length) {
@@ -71,6 +73,7 @@ export async function composeFinalVideo(args: ComposeArgs): Promise<string> {
     tmpDir,
     logoPath: localLogoPath,
     title,
+    language,
   });
 
   const buf = await fs.readFile(outputPath);

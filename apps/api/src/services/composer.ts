@@ -1,6 +1,15 @@
 import path from 'node:path';
 import ffmpeg from 'fluent-ffmpeg';
-import type { ElevenLabsAlignment, Scene } from '@newsflow/shared';
+import type { ElevenLabsAlignment, ProjectLanguage, Scene } from '@newsflow/shared';
+
+// Per-language font face. The Dockerfile installs `fonts-noto-extra` (Tamil),
+// `fonts-noto` (Latin), and `fonts-noto-cjk` — all of which provide the
+// Noto family. libass / libfribidi look up by family name.
+const SUBTITLE_FONT_BY_LANG: Record<ProjectLanguage, string> = {
+  ta: 'Noto Sans Tamil',     // Tamil shaping
+  hi: 'Noto Sans Devanagari', // Hindi shaping
+  en: 'Noto Sans',            // Latin
+};
 
 if (process.env.FFMPEG_PATH) ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 if (process.env.FFPROBE_PATH) ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
@@ -71,8 +80,9 @@ export async function composeFinalVideoFiles(args: {
   tmpDir: string;
   logoPath?: string;
   title?: string;
+  language: ProjectLanguage;
 }): Promise<void> {
-  const { imagePaths, sceneDurations, audioPath, srtPath, outputPath, tmpDir, logoPath, title } = args;
+  const { imagePaths, sceneDurations, audioPath, srtPath, outputPath, tmpDir, logoPath, title, language } = args;
 
   const sceneClips: string[] = [];
   for (let i = 0; i < imagePaths.length; i++) {
@@ -97,6 +107,7 @@ export async function composeFinalVideoFiles(args: {
     srtPath,
     outputPath,
     title,
+    language,
   });
 }
 
@@ -191,28 +202,41 @@ async function finalMux(args: {
   srtPath: string;
   outputPath: string;
   title?: string;
+  language: ProjectLanguage;
 }): Promise<void> {
   const caps = await checkFilterCaps();
   const filters: string[] = [];
 
   if (caps.subtitles) {
+    // Movie-style captions, bottom of frame, language-aware font.
+    //
+    //   FontName     — Noto Sans Tamil / Devanagari / Sans (installed in Docker)
+    //   FontSize     — 22 pt — small, readable, doesn't dominate the 1080×1920 frame
+    //   PrimaryColour — pure white
+    //   OutlineColour — black (subtle stroke for legibility on bright backgrounds)
+    //   BorderStyle=1 — outline + shadow (vs 3 = boxed background)
+    //   Outline=1.5   — thin black stroke around glyphs
+    //   Shadow=1      — small drop shadow for readability on busy footage
+    //   Alignment=2   — bottom-center
+    //   MarginV=80    — bottom margin (above device's bottom-bar / safe area)
+    //   MarginL/R=80  — side padding so long lines wrap nicely
+    const fontName = SUBTITLE_FONT_BY_LANG[args.language] ?? 'Noto Sans';
     const subs =
       `subtitles=${escapeForFilter(args.srtPath)}:force_style='` +
-      `FontName=Tamil Sangam MN,FontSize=28,` +
+      `FontName=${fontName},FontSize=22,` +
       `PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BackColour=&H00000000&,` +
-      `BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=60'`;
+      `BorderStyle=1,Outline=1.5,Shadow=1,Alignment=2,` +
+      `MarginV=80,MarginL=80,MarginR=80,WrapStyle=2'`;
     filters.push(subs);
   }
 
-  if (caps.drawtext && args.title) {
-    // Persistent headline banner at top
-    const titleEscaped = args.title.replace(/'/g, "'\\''").replace(/:/g, '\\:');
-    const titleFilter =
-      `drawtext=text='${titleEscaped}':` +
-      `fontsize=36:fontcolor=white:borderw=2:bordercolor=black:` +
-      `x=(w-text_w)/2:y=40`;
-    filters.push(titleFilter);
-  }
+  // Headline banner (drawtext) intentionally disabled. The title was a
+  // top-of-frame Latin-only overlay that:
+  //   1. Couldn't render Tamil/Devanagari (drawtext doesn't shape complex scripts)
+  //   2. Competed with the bottom subtitle layer for attention
+  //   3. Misspelled words when the title was non-English
+  // All text now lives in the bottom subtitle layer, language-aware.
+  void args.title;
 
   const hasBurn = filters.length > 0;
 
