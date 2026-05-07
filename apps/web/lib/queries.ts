@@ -17,6 +17,10 @@ export const qk = {
   billingPlans: ['billing', 'plans'] as const,
   billingMe: ['billing', 'me'] as const,
   automationStatus: ['automation', 'status'] as const,
+  blogPosts: ['blog', 'posts'] as const,
+  blogPost: (slug: string) => ['blog', 'posts', slug] as const,
+  adminBlogPosts: ['blog', 'admin', 'posts'] as const,
+  adminBlogPost: (id: string) => ['blog', 'admin', 'posts', id] as const,
 };
 
 export function useDashboardStats() {
@@ -367,5 +371,79 @@ export function useGenerateTopicSuggestions() {
   return useMutation({
     mutationFn: (args: { language?: 'ta' | 'en' | 'hi'; niche?: string; count?: number }) =>
       api.generateTopicSuggestions(args),
+  });
+}
+
+// ===== Blog (public) =====
+
+export function useBlogPosts(args?: { limit?: number; tag?: string }) {
+  return useQuery({
+    queryKey: [...qk.blogPosts, args?.limit ?? 20, args?.tag ?? ''],
+    queryFn: () => api.listBlogPosts(args),
+    staleTime: 60_000,
+  });
+}
+
+export function useBlogPost(slug: string | undefined) {
+  return useQuery({
+    queryKey: slug ? qk.blogPost(slug) : ['blog', 'posts', 'none'],
+    queryFn: () => api.getBlogPost(slug as string),
+    enabled: !!slug,
+    staleTime: 5 * 60_000,
+  });
+}
+
+// ===== Blog (admin) =====
+
+export function useAdminBlogPosts() {
+  return useQuery({
+    queryKey: qk.adminBlogPosts,
+    queryFn: api.listAdminBlogPosts,
+  });
+}
+
+export function useAdminBlogPost(id: string | undefined) {
+  return useQuery({
+    queryKey: id ? qk.adminBlogPost(id) : ['blog', 'admin', 'posts', 'none'],
+    queryFn: () => api.getAdminBlogPost(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useCreateBlogPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.createBlogPost,
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminBlogPosts });
+      qc.invalidateQueries({ queryKey: qk.blogPosts });
+    },
+  });
+}
+
+export function useUpdateBlogPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string } & Parameters<typeof api.updateBlogPost>[1]) => {
+      const { id, ...rest } = args;
+      return api.updateBlogPost(id, rest);
+    },
+    onSuccess(data) {
+      qc.invalidateQueries({ queryKey: qk.adminBlogPosts });
+      qc.invalidateQueries({ queryKey: qk.blogPosts });
+      qc.invalidateQueries({ queryKey: qk.adminBlogPost(data.id) });
+      if (data.slug) qc.invalidateQueries({ queryKey: qk.blogPost(data.slug) });
+    },
+  });
+}
+
+export function useDeleteBlogPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteBlogPost(id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminBlogPosts });
+      qc.invalidateQueries({ queryKey: qk.blogPosts });
+    },
   });
 }

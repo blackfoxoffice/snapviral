@@ -5,6 +5,7 @@ import type {
   AutomationSettings,
   AutomationStatus,
   BillingMe,
+  BlogPost,
   Currency,
   Plan,
   PlanDef,
@@ -425,5 +426,77 @@ export const api = {
       body: JSON.stringify(args),
     });
     return parseResponse(res);
+  },
+
+  // ===== Blog (public) =====
+
+  async listBlogPosts(args?: { limit?: number; tag?: string }): Promise<{ posts: BlogPost[] }> {
+    const params = new URLSearchParams();
+    if (args?.limit) params.set('limit', String(args.limit));
+    if (args?.tag) params.set('tag', args.tag);
+    const qs = params.toString();
+    const res = await fetch(`${BASE_URL}/api/blog/posts${qs ? '?' + qs : ''}`);
+    return parseResponse(res);
+  },
+
+  async getBlogPost(slug: string): Promise<BlogPost> {
+    const res = await fetch(`${BASE_URL}/api/blog/posts/${encodeURIComponent(slug)}`);
+    return parseResponse<BlogPost>(res);
+  },
+
+  // ===== Blog (admin) =====
+
+  async listAdminBlogPosts(): Promise<{ posts: BlogPost[] }> {
+    const res = await fetch(`${BASE_URL}/api/blog/admin/posts`, { headers: await authHeaders() });
+    return parseResponse(res);
+  },
+
+  async getAdminBlogPost(id: string): Promise<BlogPost> {
+    const res = await fetch(`${BASE_URL}/api/blog/admin/posts/${id}`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse<BlogPost>(res);
+  },
+
+  async createBlogPost(args: {
+    slug?: string;
+    title: string;
+    excerpt?: string | null;
+    content_md: string;
+    cover_image_url?: string | null;
+    status?: 'draft' | 'published';
+    tags?: string[];
+  }): Promise<BlogPost> {
+    const res = await fetch(`${BASE_URL}/api/blog/admin/posts`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse<BlogPost>(res);
+  },
+
+  async updateBlogPost(id: string, args: Partial<{
+    slug: string;
+    title: string;
+    excerpt: string | null;
+    content_md: string;
+    cover_image_url: string | null;
+    status: 'draft' | 'published';
+    tags: string[];
+  }>): Promise<BlogPost> {
+    const res = await fetch(`${BASE_URL}/api/blog/admin/posts/${id}`, {
+      method: 'PATCH',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse<BlogPost>(res);
+  },
+
+  async deleteBlogPost(id: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/blog/admin/posts/${id}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
   },
 };

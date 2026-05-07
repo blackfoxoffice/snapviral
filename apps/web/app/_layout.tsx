@@ -27,6 +27,9 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(app)" />
+            <Stack.Screen name="blog/index" options={{ title: 'Blog · SnapViral' }} />
+            <Stack.Screen name="blog/[slug]" options={{ title: 'SnapViral Blog' }} />
+            <Stack.Screen name="admin/login" options={{ title: 'Admin · SnapViral' }} />
             <Stack.Screen name="privacy" options={{ title: 'Privacy Policy' }} />
             <Stack.Screen name="terms" options={{ title: 'Terms of Service' }} />
             <Stack.Screen name="+not-found" options={{ title: 'Not found' }} />

@@ -1,12 +1,13 @@
 import { Slot, Redirect, usePathname, useRouter } from 'expo-router';
 import { View, Text, Pressable, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
-import { Shield, KeyRound, Users, FileText } from 'lucide-react-native';
+import { Shield, KeyRound, Users, FileText, Newspaper } from 'lucide-react-native';
 import { useIsAdmin } from '../../../lib/admin';
 
 const TABS = [
   { href: '/admin', label: 'Overview', Icon: Shield },
   { href: '/admin/secrets', label: 'Secrets', Icon: KeyRound },
   { href: '/admin/users', label: 'Users', Icon: Users },
+  { href: '/admin/blog', label: 'Blog', Icon: Newspaper },
   { href: '/admin/audit', label: 'Audit log', Icon: FileText },
 ];
 

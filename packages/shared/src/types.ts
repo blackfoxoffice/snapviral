@@ -120,6 +120,23 @@ export interface AutomationStatus {
   queue_unused_count: number;
 }
 
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  content_md?: string;
+  cover_image_url: string | null;
+  status: 'draft' | 'published';
+  tags: string[];
+  author_id?: string | null;
+  read_minutes: number | null;
+  view_count: number;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+}
+
 export interface BillingMe {
   plan: Plan;
   plan_status: PlanStatus;
