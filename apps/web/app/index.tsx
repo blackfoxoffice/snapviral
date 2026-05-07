@@ -332,36 +332,6 @@ function Hero({ ctx }: { ctx: Ctx }) {
           zIndex: 1,
         }}
       >
-        {/* New badge */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 12,
-            height: 30,
-            borderRadius: 999,
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.12)',
-            marginBottom: 28,
-            ...({ animation: 'sv-fade-up 700ms cubic-bezier(0.2,0.8,0.2,1) both' } as any),
-          }}
-        >
-          <View
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: C.redHot,
-              ...({ animation: 'sv-pulse-dot 1.6s ease-in-out infinite' } as any),
-            }}
-          />
-          <Text style={{ fontFamily: FONT.mono, fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '500', letterSpacing: 0.3 }}>
-            v2 · cartoon scenes are live
-          </Text>
-        </View>
-
         {/* Headline */}
         <View
           style={{
