@@ -378,7 +378,7 @@ export const api = {
     args: {
       topic?: string;
       scheduled_at?: string | null;
-      language?: 'ta' | 'en' | 'hi' | null;
+      language?: import('@newsflow/shared').ProjectLanguage | null;
       voice_id?: string | null;
       user_script?: string | null;
     },
@@ -416,14 +416,22 @@ export const api = {
   },
 
   async generateTopicSuggestions(args: {
-    language?: 'ta' | 'en' | 'hi';
+    language?: import('@newsflow/shared').ProjectLanguage;
     niche?: string;
     count?: number;
+    category?: string;
   }): Promise<{ topics: string[] }> {
     const res = await fetch(`${BASE_URL}/api/automation/generate-topics`, {
       method: 'POST',
       headers: await authHeaders(),
       body: JSON.stringify(args),
+    });
+    return parseResponse(res);
+  },
+
+  async listTopicCategories(): Promise<{ categories: Array<{ key: string; label: string }> }> {
+    const res = await fetch(`${BASE_URL}/api/automation/topic-categories`, {
+      headers: await authHeaders(),
     });
     return parseResponse(res);
   },

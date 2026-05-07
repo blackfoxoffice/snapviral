@@ -1,10 +1,21 @@
 import type { ElevenLabsAlignment, ProjectLanguage } from '@newsflow/shared';
 import { requireSecret } from './secrets.js';
 
+// Optional per-language fallback voices. Set in env to provide a default
+// when the user hasn't picked a voice. ElevenLabs voice IDs are global, so
+// any voice can technically narrate any language — these envs let us bias
+// toward a native-sounding voice per locale.
 const VOICE_ID_BY_LANG: Record<ProjectLanguage, string | undefined> = {
   ta: process.env.ELEVENLABS_VOICE_ID_TAMIL,
   en: process.env.ELEVENLABS_VOICE_ID_ENGLISH,
   hi: process.env.ELEVENLABS_VOICE_ID_HINDI,
+  kn: process.env.ELEVENLABS_VOICE_ID_KANNADA,
+  te: process.env.ELEVENLABS_VOICE_ID_TELUGU,
+  ml: process.env.ELEVENLABS_VOICE_ID_MALAYALAM,
+  bn: process.env.ELEVENLABS_VOICE_ID_BENGALI,
+  mr: process.env.ELEVENLABS_VOICE_ID_MARATHI,
+  gu: process.env.ELEVENLABS_VOICE_ID_GUJARATI,
+  pa: process.env.ELEVENLABS_VOICE_ID_PUNJABI,
 };
 
 export async function generateTtsWithAlignment(args: {

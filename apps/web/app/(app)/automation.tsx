@@ -50,12 +50,9 @@ import {
   useGenerateTopicSuggestions,
   useYouTubeStatus,
 } from '../../lib/queries';
+import { LANG_SELECT_OPTIONS, LANGUAGE_LABEL } from '../../lib/languages';
 
-const LANG_OPTS: { value: ProjectLanguage; label: string }[] = [
-  { value: 'ta', label: 'Tamil' },
-  { value: 'en', label: 'English' },
-  { value: 'hi', label: 'Hindi' },
-];
+const LANG_OPTS = LANG_SELECT_OPTIONS;
 
 const STYLE_OPTS: { value: ImageStyle; label: string }[] = [
   { value: 'realistic', label: 'Realistic' },
@@ -99,7 +96,7 @@ export default function AutomationPage() {
     setSelectedGenerated(new Set());
     try {
       const result = await generateMut.mutateAsync({
-        language: (local?.automation_language as 'ta' | 'en' | 'hi') ?? 'ta',
+        language: (local?.automation_language as ProjectLanguage) ?? 'ta',
         niche: niche.trim() || undefined,
         count: 12,
       });
@@ -1228,7 +1225,7 @@ function TopicEditor({
           />
         ) : (
           <Text className="text-[11px] text-ink-muted leading-relaxed">
-            AI will write the script in {language === 'ta' ? 'Tamil' : language === 'hi' ? 'Hindi' : 'English'} based on the topic, then narrate it with the chosen voice.
+            AI will write the script in {LANGUAGE_LABEL[language as ProjectLanguage] ?? 'English'} based on the topic, then narrate it with the chosen voice.
           </Text>
         )}
       </View>

@@ -3,13 +3,12 @@ import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import type { Project } from '@newsflow/shared';
 import { StatusBadge } from './StatusBadge';
+import { LANGUAGE_LABEL as LANG_LABEL } from '../../lib/languages';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
-
-const LANG_LABEL: Record<string, string> = { ta: 'Tamil', en: 'English', hi: 'Hindi' };
 
 export function ProjectsTable({ projects }: { projects: Project[] }) {
   const router = useRouter();

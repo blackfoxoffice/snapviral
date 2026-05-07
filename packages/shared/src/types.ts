@@ -1,5 +1,15 @@
 export type ProjectStatus = 'draft' | 'queued' | 'running' | 'ready' | 'failed';
-export type ProjectLanguage = 'ta' | 'en' | 'hi';
+export type ProjectLanguage =
+  | 'ta'
+  | 'en'
+  | 'hi'
+  | 'kn'
+  | 'te'
+  | 'ml'
+  | 'bn'
+  | 'mr'
+  | 'gu'
+  | 'pa';
 export type InputMode = 'urls' | 'script' | 'topic' | 'research';
 export type ImageStyle = 'cartoon' | 'illustrated' | 'realistic' | 'ultra_realistic';
 

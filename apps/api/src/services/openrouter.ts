@@ -2,7 +2,33 @@ import type { ImageStyle, ProjectLanguage, ResearchResult, ScriptOutput } from '
 import type { SourceContext } from '../pipeline/steps/01-ingest.js';
 import { requireSecret } from './secrets.js';
 
-const LANG_NAME: Record<ProjectLanguage, string> = { ta: 'Tamil', en: 'English', hi: 'Hindi' };
+const LANG_NAME: Record<ProjectLanguage, string> = {
+  ta: 'Tamil',
+  en: 'English',
+  hi: 'Hindi',
+  kn: 'Kannada',
+  te: 'Telugu',
+  ml: 'Malayalam',
+  bn: 'Bengali',
+  mr: 'Marathi',
+  gu: 'Gujarati',
+  pa: 'Punjabi',
+};
+
+// Words per second of voiceover, language-dependent. Indic scripts trend
+// slower for a given character count due to compound consonants.
+const LANG_WPS: Record<ProjectLanguage, number> = {
+  ta: 2.5,
+  hi: 2.7,
+  en: 2.8,
+  kn: 2.5,
+  te: 2.5,
+  ml: 2.4,
+  bn: 2.6,
+  mr: 2.7,
+  gu: 2.7,
+  pa: 2.7,
+};
 
 function buildScriptSystemPrompt(
   mode: 'urls' | 'script' | 'topic' | 'research',
@@ -10,7 +36,7 @@ function buildScriptSystemPrompt(
   durationSeconds: number,
 ): string {
   const langName = LANG_NAME[language];
-  const wpm = language === 'ta' ? 2.5 : 2.8;
+  const wpm = LANG_WPS[language];
   const targetWords = Math.round(durationSeconds * wpm);
 
   const commonTail = `
@@ -152,40 +178,222 @@ export async function callGeminiScript(args: {
   return JSON.parse(content) as ScriptOutput;
 }
 
+// =====================================================================
+// Popular topic categories — preset content angles a user can tap to
+// seed topic generation. Inspired by the AutoShorts.ai "popular topics"
+// chip rail. Each category gets a tailored prompt.
+// =====================================================================
+export type TopicCategory =
+  | 'trending_news'
+  | 'bible_stories'
+  | 'random_ai_story'
+  | 'travel_destinations'
+  | 'what_if'
+  | 'scary_stories'
+  | 'bedtime_stories'
+  | 'interesting_history'
+  | 'urban_legends'
+  | 'motivational'
+  | 'fun_facts'
+  | 'long_form_jokes'
+  | 'life_pro_tips'
+  | 'eli5'
+  | 'mythology'
+  | 'philosophy'
+  | 'finance_tips';
+
+interface CategorySpec {
+  label: string;
+  systemFraming: string; // becomes the first line of the system prompt
+  userPrompt: string;    // user message
+  formHint: string;      // shape of each topic
+  isLive: boolean;       // does this category benefit from live web search?
+}
+
+const CATEGORIES: Record<TopicCategory, CategorySpec> = {
+  trending_news: {
+    label: 'Trending news',
+    systemFraming:
+      "You are a news editor helping a creator stock their content queue. Search the live web for what's trending RIGHT NOW across general news, politics, tech, sports, entertainment, and India local.",
+    userPrompt: 'Trending news topics',
+    formHint: 'a single short news headline (8-15 words). Declarative. No question marks.',
+    isLive: true,
+  },
+  bible_stories: {
+    label: 'Bible stories',
+    systemFraming:
+      'You are a content strategist for a creator who tells classic Bible stories in short-form video. Pick well-known and lesser-known stories that teach a moral or have dramatic narrative tension.',
+    userPrompt: 'Bible story topics for short-form video',
+    formHint: 'a story title and angle (e.g. "Daniel in the lion\'s den — the night God shut the mouths of beasts")',
+    isLive: false,
+  },
+  random_ai_story: {
+    label: 'Random AI story',
+    systemFraming:
+      'You are a creative writer who invents original short-form video story premises. Mix genres — sci-fi, mystery, drama, magical realism. Each premise should hook a viewer in the first sentence.',
+    userPrompt: 'Random original story premises',
+    formHint: 'a one-line story premise (8-18 words) that opens with a hook',
+    isLive: false,
+  },
+  travel_destinations: {
+    label: 'Travel destinations',
+    systemFraming:
+      'You are a travel editor helping a creator who covers underrated and famous destinations. Mix budget gems, hidden spots, and bucket-list places.',
+    userPrompt: 'Travel destination topics for short-form video',
+    formHint: 'a destination + one-line angle (e.g. "Spiti Valley — the cold desert nobody talks about")',
+    isLive: true,
+  },
+  what_if: {
+    label: 'What if?',
+    systemFraming:
+      'You are a creative writer specializing in "What if" thought experiments — counterfactuals about history, science, society, technology. Each prompt should make a viewer want to know the answer.',
+    userPrompt: '"What if" thought-experiment topics',
+    formHint: 'a "What if..." question (10-18 words)',
+    isLive: false,
+  },
+  scary_stories: {
+    label: 'Scary stories',
+    systemFraming:
+      'You are a horror writer who pitches short-form scary story ideas. Real-feeling, unsettling, no gore — atmospheric dread. Mix urban legends, paranormal encounters, and unexplained mysteries.',
+    userPrompt: 'Scary / horror story topics for short-form video',
+    formHint: 'a story title with a chilling hook (e.g. "The hitchhiker who knew my name")',
+    isLive: false,
+  },
+  bedtime_stories: {
+    label: 'Bedtime stories',
+    systemFraming:
+      'You are a children\'s author. Pitch calming, kind bedtime story ideas — animals, gentle moral lessons, magical worlds, no scares. Suitable for ages 4-10.',
+    userPrompt: 'Calming bedtime story ideas for kids',
+    formHint: 'a gentle story title with a one-line summary',
+    isLive: false,
+  },
+  interesting_history: {
+    label: 'Interesting history',
+    systemFraming:
+      'You are a history nerd who pitches under-the-radar historical stories that read like a thriller. Avoid the obvious greatest-hits — find the strange, specific, surprising stories.',
+    userPrompt: 'Fascinating but lesser-known history topics',
+    formHint: 'a historical event + angle (e.g. "The Dancing Plague of 1518 — a town that danced itself to death")',
+    isLive: false,
+  },
+  urban_legends: {
+    label: 'Urban legends',
+    systemFraming:
+      'You are a folklorist who collects regional urban legends from around the world — especially South Asia, Latin America, East Asia. Real folklore, not internet creepypasta.',
+    userPrompt: 'Real urban legend topics from world folklore',
+    formHint: 'a legend name + one-line hook',
+    isLive: false,
+  },
+  motivational: {
+    label: 'Motivational',
+    systemFraming:
+      'You are a content strategist for a motivational creator. Pitch sharp, specific topics — not platitudes. Stories of resilience, useful frames, lessons from real lives.',
+    userPrompt: 'Motivational topics with a specific angle',
+    formHint: 'a punchy headline (no clichés like "follow your dreams")',
+    isLive: false,
+  },
+  fun_facts: {
+    label: 'Fun facts',
+    systemFraming:
+      'You are a science communicator pitching genuinely surprising facts that most people do not know. Verifiable, specific, counterintuitive. No "did you know" pre-amble.',
+    userPrompt: 'Surprising and verifiable fun facts',
+    formHint: 'a one-line fact that ends with the surprise (e.g. "Bananas are berries; strawberries are not.")',
+    isLive: false,
+  },
+  long_form_jokes: {
+    label: 'Long-form jokes',
+    systemFraming:
+      'You are a stand-up writer pitching long-form joke setups for short-form video. The setup should land in 30-45 seconds with a clean punchline. PG-13. No edgy/offensive humor.',
+    userPrompt: 'Long-form joke setups',
+    formHint: 'a joke title or one-line setup',
+    isLive: false,
+  },
+  life_pro_tips: {
+    label: 'Life pro tips',
+    systemFraming:
+      'You are a productivity / life-hack writer. Pitch specific, useful, non-obvious tips. Each should be actionable today. No generic advice.',
+    userPrompt: 'Life pro tips that are non-obvious',
+    formHint: 'a sharp tip (e.g. "Email subject lines starting with [Action] get replies 2x faster")',
+    isLive: false,
+  },
+  eli5: {
+    label: 'ELI5',
+    systemFraming:
+      'You are an explainer writer pitching "Explain Like I\'m 5" topics. Pick complex concepts that beg a clear, simple explanation — economics, physics, biology, computing, geopolitics.',
+    userPrompt: 'ELI5 explainer topics',
+    formHint: 'a topic phrased as "ELI5: how does X work?"',
+    isLive: false,
+  },
+  mythology: {
+    label: 'Mythology',
+    systemFraming:
+      'You are a comparative-mythology writer. Pitch stories from Indian, Greek, Norse, Egyptian, Japanese, African and Mesoamerican myth. Mix famous and obscure.',
+    userPrompt: 'Mythology story topics from world traditions',
+    formHint: 'a myth title + tradition (e.g. "Karna\'s armor — the curse hidden in his birth")',
+    isLive: false,
+  },
+  philosophy: {
+    label: 'Philosophy',
+    systemFraming:
+      'You are a philosophy explainer pitching big ideas in accessible ways. Cover ethics, metaphysics, eastern + western thought. Each topic should provoke.',
+    userPrompt: 'Philosophy topics for short-form video',
+    formHint: 'a philosophical question or idea (e.g. "The trolley problem — would you pull the lever?")',
+    isLive: false,
+  },
+  finance_tips: {
+    label: 'Finance tips',
+    systemFraming:
+      'You are a financial-literacy writer pitching specific, useful tips for individual investors and savers. India + global context. No get-rich-quick. No specific stock picks.',
+    userPrompt: 'Personal finance topics',
+    formHint: 'a sharp finance tip or concept (e.g. "Why your SIP returns lag your fund\'s return")',
+    isLive: true,
+  },
+};
+
+export function listTopicCategories(): Array<{ key: TopicCategory; label: string }> {
+  return (Object.entries(CATEGORIES) as [TopicCategory, CategorySpec][]).map(([key, spec]) => ({
+    key,
+    label: spec.label,
+  }));
+}
+
 /**
- * Use Perplexity Sonar to surface real, currently-trending news topics.
- * Returns a list of headline-style strings the user can drop into the
- * auto-publish queue. Topics are written in the requested language.
+ * Use Perplexity Sonar to generate topic ideas for a creator's queue.
+ * Topics are tailored to the chosen category and language. For news /
+ * travel / finance categories the model will search the live web; for
+ * evergreen categories (Bible, mythology, ELI5, etc.) it draws from its
+ * own knowledge.
  */
 export async function generateTopicSuggestions(args: {
   language: ProjectLanguage;
   niche?: string;
   count?: number;
+  category?: TopicCategory;
 }): Promise<string[]> {
   const apiKey = await requireSecret('OPENROUTER_API_KEY');
   const langName = LANG_NAME[args.language];
   const count = Math.max(3, Math.min(args.count ?? 12, 20));
 
   const niche = args.niche?.trim();
-  const focus = niche ? ` focused on "${niche}"` : ' across general news, politics, tech, sports, entertainment, and India local';
+  const category = args.category ?? 'trending_news';
+  const spec = CATEGORIES[category];
+  const nicheClause = niche ? ` focused on "${niche}".` : '';
 
-  const systemPrompt = `You are a news editor helping a creator stock their content queue.
-Search the live web for what's trending RIGHT NOW${focus}.
+  const systemPrompt = `${spec.systemFraming}${nicheClause}
 
 Return a JSON object with this exact shape:
 {
   "topics": [
-    "Concise headline #1, in ${langName}",
-    "Concise headline #2, in ${langName}",
+    "${spec.formHint} #1, in ${langName}",
+    "${spec.formHint} #2, in ${langName}",
     ...
   ]
 }
 
 Rules:
 - Exactly ${count} topics.
-- Each topic = a single short news headline (8-15 words). Not a question, not "What is X" — declarative.
+- Each topic = ${spec.formHint}.
 - Written in ${langName}. Native script, no transliteration.
-- Verifiable, currently-trending stories. No speculation.
+- ${spec.isLive ? 'Verifiable, currently-trending. No speculation.' : 'Original or well-attested. No speculation as fact.'}
 - No duplicates. No numbering. No quotes inside the strings.
 - Output ONLY the JSON object. No preamble, no markdown.`;
 
@@ -201,7 +409,7 @@ Rules:
       model: 'perplexity/sonar-pro-search',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: niche ? `Trending topics in ${niche}` : 'Trending news topics' },
+        { role: 'user', content: niche ? `${spec.userPrompt} (focus: ${niche})` : spec.userPrompt },
       ],
       temperature: 0.5,
       // Perplexity rejects response_format: json_object — only supports
@@ -331,8 +539,15 @@ const IMAGE_STYLE_PREFIX: Record<ImageStyle, string> = {
 // belongs in the subtitle/overlay layer, not in the pixels.
 const IMAGE_LANGUAGE_CONTEXT: Record<ProjectLanguage, string> = {
   ta: 'South Indian / Tamil Nadu setting and aesthetic. Indian people, Indian streets and architecture (Chennai, Madurai, Kerala adjacent). ',
-  hi: 'North Indian / Indian setting and aesthetic. Indian people, Indian streets and architecture (Delhi, Mumbai, Bengaluru). ',
+  hi: 'North Indian / Hindi-belt setting. Indian people, Indian streets and architecture (Delhi, Mumbai, Bengaluru, Lucknow). ',
   en: 'International / global newsroom aesthetic. Subjects appropriate to the headline. ',
+  kn: 'Karnataka / Bengaluru setting and aesthetic. South Indian people, Bengaluru / Mysuru / Mangaluru streets and architecture. ',
+  te: 'Telugu / Andhra Pradesh & Telangana setting. South Indian people, Hyderabad / Vijayawada streets and architecture. ',
+  ml: 'Kerala setting and aesthetic. South Indian people, Kochi / Thiruvananthapuram / Kozhikode streets, backwaters and coastal architecture. ',
+  bn: 'Bengali / West Bengal & Bangladesh setting. Indian people, Kolkata streets, trams and colonial-era architecture. ',
+  mr: 'Marathi / Maharashtra setting. Indian people, Mumbai / Pune streets and architecture. ',
+  gu: 'Gujarati / Gujarat setting. Indian people, Ahmedabad / Surat streets and architecture, vibrant textiles. ',
+  pa: 'Punjabi / Punjab setting. Indian / Pakistani people, Amritsar / Chandigarh / Lahore streets, fields and Sikh-temple architecture. ',
 };
 
 // Hard-coded across every image, every style, every language: NO TEXT.

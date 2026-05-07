@@ -27,6 +27,7 @@ import { VoicePicker } from '../../../components/project/VoicePicker';
 import { StylePicker } from '../../../components/project/StylePicker';
 import { TopicSuggestions } from '../../../components/project/TopicSuggestions';
 import { useCreateProject, useGenerateProject, useVoices } from '../../../lib/queries';
+import { LANG_SELECT_OPTIONS, LANGUAGE_LABEL } from '../../../lib/languages';
 
 const STEPS = [{ label: 'Source' }, { label: 'Settings' }, { label: 'Review' }];
 
@@ -294,11 +295,7 @@ export default function NewProject() {
                   label="Language"
                   value={language}
                   onChange={(v) => { setLanguage(v); setVoiceId(null); }}
-                  options={[
-                    { value: 'ta', label: 'Tamil' },
-                    { value: 'en', label: 'English' },
-                    { value: 'hi', label: 'Hindi' },
-                  ]}
+                  options={LANG_SELECT_OPTIONS}
                 />
                 <StylePicker value={imageStyle} onChange={setImageStyle} />
                 <DurationPicker value={duration} onChange={setDuration} />
@@ -351,7 +348,7 @@ export default function NewProject() {
                 />
                 <ReviewRow label="Title" value={title} />
                 {topic ? <ReviewRow label="Topic" value={topic} /> : null}
-                <ReviewRow label="Language" value={language === 'ta' ? 'Tamil' : language === 'hi' ? 'Hindi' : 'English'} />
+                <ReviewRow label="Language" value={LANGUAGE_LABEL[language] ?? language} />
                 <ReviewRow
                   label="Image style"
                   value={

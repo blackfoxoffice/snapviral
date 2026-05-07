@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# fonts-noto-extra includes Noto Sans Tamil, used by the FFmpeg subtitle burn-in.
+# fonts-noto-extra ships every Indic Noto script we burn in via FFmpeg/libass:
+# Tamil, Telugu, Kannada, Malayalam, Bengali, Gujarati, Devanagari, Gurmukhi.
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH

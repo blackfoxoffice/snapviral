@@ -324,7 +324,7 @@ export function useUpdateTopic() {
       id: string;
       topic?: string;
       scheduled_at?: string | null;
-      language?: 'ta' | 'en' | 'hi' | null;
+      language?: import('@newsflow/shared').ProjectLanguage | null;
       voice_id?: string | null;
       user_script?: string | null;
     }) => {
@@ -369,8 +369,20 @@ export function useAutoScheduleTopics() {
 
 export function useGenerateTopicSuggestions() {
   return useMutation({
-    mutationFn: (args: { language?: 'ta' | 'en' | 'hi'; niche?: string; count?: number }) =>
-      api.generateTopicSuggestions(args),
+    mutationFn: (args: {
+      language?: import('@newsflow/shared').ProjectLanguage;
+      niche?: string;
+      count?: number;
+      category?: string;
+    }) => api.generateTopicSuggestions(args),
+  });
+}
+
+export function useTopicCategories() {
+  return useQuery({
+    queryKey: ['automation', 'topic-categories'] as const,
+    queryFn: api.listTopicCategories,
+    staleTime: 60 * 60_000,
   });
 }
 

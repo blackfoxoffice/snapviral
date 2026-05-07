@@ -13,6 +13,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { StatusBadge } from '../../components/project/StatusBadge';
 import { useProjects, useDashboardStats } from '../../lib/queries';
 import { useAuth } from '../../lib/auth';
+import { LANGUAGE_LABEL } from '../../lib/languages';
 import type { Project } from '@newsflow/shared';
 
 function formatDuration(seconds: number): string {
@@ -36,7 +37,7 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-const LANG: Record<string, string> = { ta: 'Tamil', en: 'English', hi: 'Hindi' };
+const LANG = LANGUAGE_LABEL;
 const SOURCE: Record<string, string> = { urls: 'YouTube', script: 'Script', topic: 'Topic', research: 'Research' };
 
 export default function Dashboard() {
@@ -226,7 +227,7 @@ export default function Dashboard() {
                         .sort((a, b) => b[1] - a[1])
                         .map(([lang, count]) => (
                           <View key={lang} className="flex-row items-center justify-between">
-                            <Text className="text-[12px] text-ink-secondary">{LANG[lang] ?? lang}</Text>
+                            <Text className="text-[12px] text-ink-secondary">{(LANG as Record<string, string>)[lang] ?? lang}</Text>
                             <Text className="text-[12px] font-semibold text-ink" style={{ fontVariant: ['tabular-nums'] }}>
                               {count}
                             </Text>

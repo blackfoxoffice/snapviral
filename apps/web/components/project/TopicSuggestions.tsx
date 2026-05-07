@@ -1,162 +1,49 @@
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import {
-  Newspaper,
-  Landmark,
-  Trophy,
-  Cpu,
-  Film,
-  TrendingUp,
-  HeartPulse,
-  GraduationCap,
-  Globe2,
-  MapPin,
-  Flame,
   Sparkles,
+  BookOpen,
+  Wand2,
+  Plane,
+  HelpCircle,
+  Skull,
+  Moon,
+  Landmark,
+  Ghost,
+  Trophy,
+  Zap,
+  Lightbulb,
+  Mic,
   type LucideIcon,
+  Newspaper,
+  GraduationCap,
+  TrendingUp,
 } from 'lucide-react-native';
 import type { ProjectLanguage } from '@newsflow/shared';
+import { useGenerateTopicSuggestions, useTopicCategories } from '../../lib/queries';
+import { toast } from '../ui/Toast';
 
-interface Suggestion {
-  category: string;
-  Icon: LucideIcon;
-  accent: string;
-  examplesByLang: Partial<Record<ProjectLanguage, string[]>> & { en: string[] };
-}
-
-// Curated, news-flavored prompts. The picker fills the topic field with one
-// example from the chosen category (rotates through examples on repeat clicks).
-const SUGGESTIONS: Suggestion[] = [
-  {
-    category: 'Breaking news',
-    Icon: Flame,
-    accent: '#E53935',
-    examplesByLang: {
-      en: [
-        'Today\'s top headline',
-        'Major story breaking in the last 24 hours',
-        'Big political development today',
-      ],
-      ta: [
-        'இன்றைய முக்கிய செய்தி',
-        '24 மணி நேரத்தில் வெளிவந்த பெரிய செய்தி',
-      ],
-      hi: [
-        'आज की प्रमुख खबर',
-        'पिछले 24 घंटे की बड़ी ख़बर',
-      ],
-    },
-  },
-  {
-    category: 'Politics',
-    Icon: Landmark,
-    accent: '#2563EB',
-    examplesByLang: {
-      en: ['TN election 2026 update', 'Latest Lok Sabha development', 'PM\'s announcement today'],
-      ta: ['தமிழ்நாடு தேர்தல் 2026 புதுப்பிப்பு', 'இன்றைய பிரதமர் அறிவிப்பு'],
-      hi: ['लोकसभा 2026 अपडेट', 'आज प्रधानमंत्री की घोषणा'],
-    },
-  },
-  {
-    category: 'Tamil cinema',
-    Icon: Film,
-    accent: '#A855F7',
-    examplesByLang: {
-      en: ['Latest Kollywood release', 'Vijay\'s new film announcement', 'Box office collection update'],
-      ta: ['சமீபத்திய கோலிவுட் வெளியீடு', 'விஜய்யின் புதிய படம்'],
-      hi: ['कोलीवुड की ताज़ा रिलीज़'],
-    },
-  },
-  {
-    category: 'Sports',
-    Icon: Trophy,
-    accent: '#F59E0B',
-    examplesByLang: {
-      en: ['IPL 2026 latest match', 'Indian cricket team news', 'Chennai Super Kings update'],
-      ta: ['ஐபிஎல் 2026 சமீபத்திய போட்டி', 'சிஎஸ்கே செய்தி'],
-      hi: ['आईपीएल 2026 ताज़ा मैच', 'टीम इंडिया की खबर'],
-    },
-  },
-  {
-    category: 'Tech & startups',
-    Icon: Cpu,
-    accent: '#10B981',
-    examplesByLang: {
-      en: ['Latest AI announcement', 'Indian startup funding news', 'New Apple/Samsung launch'],
-      ta: ['சமீபத்திய AI அறிவிப்பு', 'இந்திய ஸ்டார்ட்அப் நிதி செய்தி'],
-      hi: ['ताज़ा AI घोषणा', 'भारतीय स्टार्टअप फंडिंग'],
-    },
-  },
-  {
-    category: 'Business & markets',
-    Icon: TrendingUp,
-    accent: '#0EA5E9',
-    examplesByLang: {
-      en: ['Sensex/Nifty close today', 'Major IPO this week', 'Big merger or acquisition'],
-      ta: ['சென்செக்ஸ் / நிஃப்டி இறுதி', 'இந்த வாரம் முக்கிய IPO'],
-      hi: ['सेंसेक्स/निफ्टी आज की क्लोज़', 'इस सप्ताह का प्रमुख IPO'],
-    },
-  },
-  {
-    category: 'Entertainment',
-    Icon: Sparkles,
-    accent: '#EC4899',
-    examplesByLang: {
-      en: ['Bollywood news today', 'OTT release this week', 'Celebrity headline'],
-      ta: ['சமீபத்திய OTT வெளியீடு', 'பாலிவுட் செய்தி'],
-      hi: ['आज की बॉलीवुड खबर', 'इस सप्ताह OTT रिलीज़'],
-    },
-  },
-  {
-    category: 'World news',
-    Icon: Globe2,
-    accent: '#6366F1',
-    examplesByLang: {
-      en: ['Major international headline', 'Update from a global conflict', 'US/UK politics today'],
-      ta: ['சர்வதேச முக்கிய தலைப்பு', 'அமெரிக்க அரசியல் இன்று'],
-      hi: ['प्रमुख अंतरराष्ट्रीय खबर', 'अमेरिकी राजनीति आज'],
-    },
-  },
-  {
-    category: 'Tamil Nadu local',
-    Icon: MapPin,
-    accent: '#14B8A6',
-    examplesByLang: {
-      en: ['Chennai weather alert', 'Tamil Nadu local infrastructure update', 'Tamil Nadu government scheme'],
-      ta: ['சென்னை வானிலை எச்சரிக்கை', 'தமிழ்நாடு அரசு திட்டம்'],
-      hi: ['चेन्नई मौसम अलर्ट', 'तमिलनाडु सरकार की योजना'],
-    },
-  },
-  {
-    category: 'Health',
-    Icon: HeartPulse,
-    accent: '#EF4444',
-    examplesByLang: {
-      en: ['New health study results', 'Disease outbreak update', 'Wellness research finding'],
-      ta: ['புதிய சுகாதார ஆய்வு முடிவுகள்'],
-      hi: ['नया स्वास्थ्य अध्ययन'],
-    },
-  },
-  {
-    category: 'Education',
-    Icon: GraduationCap,
-    accent: '#8B5CF6',
-    examplesByLang: {
-      en: ['NEET / JEE results update', 'Education policy change', 'Top university news'],
-      ta: ['NEET / JEE முடிவுகள்', 'கல்விக் கொள்கை மாற்றம்'],
-      hi: ['NEET / JEE रिज़ल्ट अपडेट'],
-    },
-  },
-  {
-    category: 'General news',
-    Icon: Newspaper,
-    accent: '#64748B',
-    examplesByLang: {
-      en: ['Random important story today', 'Trending news', 'Notable update worth covering'],
-      ta: ['இன்றைய முக்கிய செய்தி', 'பிரபலமான செய்தி'],
-      hi: ['आज की महत्वपूर्ण खबर', 'ट्रेंडिंग खबर'],
-    },
-  },
-];
+// Visual decoration per category. Keeps the rail readable without
+// sending a payload of icons from the server.
+const ICON_BY_KEY: Record<string, { Icon: LucideIcon; accent: string }> = {
+  trending_news:        { Icon: Newspaper,    accent: '#E11D2C' },
+  bible_stories:        { Icon: BookOpen,     accent: '#7C3AED' },
+  random_ai_story:      { Icon: Wand2,        accent: '#EC4899' },
+  travel_destinations:  { Icon: Plane,        accent: '#0EA5E9' },
+  what_if:              { Icon: HelpCircle,   accent: '#F59E0B' },
+  scary_stories:        { Icon: Skull,        accent: '#DC2626' },
+  bedtime_stories:      { Icon: Moon,         accent: '#6366F1' },
+  interesting_history:  { Icon: Landmark,     accent: '#A16207' },
+  urban_legends:        { Icon: Ghost,        accent: '#475569' },
+  motivational:         { Icon: Trophy,       accent: '#F59E0B' },
+  fun_facts:            { Icon: Zap,          accent: '#10B981' },
+  long_form_jokes:      { Icon: Mic,          accent: '#0EA5E9' },
+  life_pro_tips:        { Icon: Lightbulb,    accent: '#16A34A' },
+  eli5:                 { Icon: GraduationCap,accent: '#8B5CF6' },
+  mythology:            { Icon: Sparkles,     accent: '#9F0617' },
+  philosophy:           { Icon: BookOpen,     accent: '#1F2937' },
+  finance_tips:         { Icon: TrendingUp,   accent: '#0F766E' },
+};
 
 interface Props {
   language: ProjectLanguage;
@@ -165,49 +52,111 @@ interface Props {
 }
 
 export function TopicSuggestions({ language, selected, onPick }: Props) {
+  const { data: categoriesResp } = useTopicCategories();
+  const generateMut = useGenerateTopicSuggestions();
+  const [pending, setPending] = useState<string | null>(null);
+
+  const categories = categoriesResp?.categories ?? [];
+
+  async function handlePick(key: string, label: string) {
+    setPending(key);
+    try {
+      const { topics } = await generateMut.mutateAsync({
+        language,
+        category: key,
+        count: 3,
+      });
+      const first = topics[0];
+      if (!first) {
+        toast.error('No topics returned', `Try ${label} again or pick another category.`);
+        return;
+      }
+      onPick(first);
+    } catch (e) {
+      toast.error('Could not generate topic', e instanceof Error ? e.message : undefined);
+    } finally {
+      setPending(null);
+    }
+  }
+
   return (
     <View>
-      <Text className="text-[12px] font-semibold text-ink-secondary mb-2 uppercase tracking-wide">
-        Popular topics
-      </Text>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-[12px] font-semibold text-ink-secondary uppercase tracking-wide">
+          Popular topics
+        </Text>
+        <View className="flex-row items-center gap-1.5">
+          <Sparkles size={11} color="#E11D2C" />
+          <Text className="text-[10px] text-ink-subtle">AI picks one for you</Text>
+        </View>
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingRight: 8, gap: 8 }}
       >
-        {SUGGESTIONS.map((s) => {
-          const examples = s.examplesByLang[language] ?? s.examplesByLang.en;
-          const isSelected = selected ? examples.includes(selected) : false;
-          const Icon = s.Icon;
-          return (
-            <Pressable
-              key={s.category}
-              onPress={() => {
-                // Rotate through examples on repeat clicks
-                const idx = examples.indexOf(selected ?? '');
-                const next = examples[(idx + 1) % examples.length] ?? examples[0]!;
-                onPick(next);
-              }}
-              className="flex-row items-center gap-2 rounded-full px-3 py-2"
-              style={{
-                backgroundColor: isSelected ? `${s.accent}1A` : '#FFFFFF',
-                borderWidth: 1,
-                borderColor: isSelected ? s.accent : '#E4E4E7',
-              }}
-            >
-              <Icon size={13} color={s.accent} />
-              <Text
-                className="text-[12px]"
-                style={{ color: isSelected ? s.accent : '#334155', fontWeight: isSelected ? '600' : '500' }}
-              >
-                {s.category}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {categories.length === 0
+          ? // Skeletons while categories load
+            [1, 2, 3, 4, 5].map((i) => (
+              <View
+                key={i}
+                style={{
+                  height: 36,
+                  width: 120,
+                  borderRadius: 999,
+                  backgroundColor: '#F4F4F5',
+                  borderWidth: 1,
+                  borderColor: '#E4E4E7',
+                }}
+              />
+            ))
+          : categories.map((c) => {
+              const meta = ICON_BY_KEY[c.key] ?? { Icon: Sparkles, accent: '#52525B' };
+              const Icon = meta.Icon;
+              const isPending = pending === c.key;
+              const isPicked = selected != null && selected !== '' && pending === null && false;
+              // (Selection state is handled by the parent text input — the
+              // chip itself doesn't track which generated topic is "current".)
+              return (
+                <Pressable
+                  key={c.key}
+                  onPress={() => handlePick(c.key, c.label)}
+                  disabled={generateMut.isPending}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingHorizontal: 12,
+                    height: 36,
+                    borderRadius: 999,
+                    backgroundColor: isPicked ? `${meta.accent}1A` : '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: isPicked ? meta.accent : '#E4E4E7',
+                    opacity: generateMut.isPending && !isPending ? 0.5 : 1,
+                  }}
+                >
+                  {isPending ? (
+                    <ActivityIndicator size="small" color={meta.accent} />
+                  ) : (
+                    <Icon size={13} color={meta.accent} />
+                  )}
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: isPicked ? meta.accent : '#334155',
+                      fontWeight: isPicked ? '600' : '500',
+                    }}
+                  >
+                    {c.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
       </ScrollView>
-      <Text className="text-[10px] text-ink-subtle mt-1.5">
-        Tap a chip to fill the topic — tap again to cycle through more examples.
+
+      <Text className="text-[10px] text-ink-subtle mt-2">
+        Tap a category — AI generates a fresh topic in your chosen language. Tap again for a new one.
       </Text>
     </View>
   );

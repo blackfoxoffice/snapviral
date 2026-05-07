@@ -2,13 +2,20 @@ import path from 'node:path';
 import ffmpeg from 'fluent-ffmpeg';
 import type { ElevenLabsAlignment, ProjectLanguage, Scene } from '@newsflow/shared';
 
-// Per-language font face. The Dockerfile installs `fonts-noto-extra` (Tamil),
-// `fonts-noto` (Latin), and `fonts-noto-cjk` — all of which provide the
-// Noto family. libass / libfribidi look up by family name.
+// Per-language font face. The Dockerfile installs the full Noto family
+// (`fonts-noto-extra`, `fonts-noto-core`, `fonts-noto-ui-core`) which covers
+// every Indic script we support. libass / libfribidi look up by family name.
 const SUBTITLE_FONT_BY_LANG: Record<ProjectLanguage, string> = {
-  ta: 'Noto Sans Tamil',     // Tamil shaping
-  hi: 'Noto Sans Devanagari', // Hindi shaping
-  en: 'Noto Sans',            // Latin
+  ta: 'Noto Sans Tamil',
+  hi: 'Noto Sans Devanagari',  // Hindi
+  en: 'Noto Sans',
+  kn: 'Noto Sans Kannada',
+  te: 'Noto Sans Telugu',
+  ml: 'Noto Sans Malayalam',
+  bn: 'Noto Sans Bengali',
+  mr: 'Noto Sans Devanagari',  // Marathi shares Devanagari
+  gu: 'Noto Sans Gujarati',
+  pa: 'Noto Sans Gurmukhi',    // Punjabi
 };
 
 if (process.env.FFMPEG_PATH) ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);

@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
 import { getServiceClient } from '../services/supabase.js';
-import { generateTopicSuggestions } from '../services/openrouter.js';
+import {
+  generateTopicSuggestions,
+  listTopicCategories,
+  type TopicCategory,
+} from '../services/openrouter.js';
 import type { ProjectLanguage } from '@newsflow/shared';
 
 export const automationRouter = Router();
@@ -420,17 +424,30 @@ automationRouter.delete('/topics', async (req: Request, res: Response) => {
   res.status(204).end();
 });
 
-// AI topic suggestions — Perplexity Sonar grounded in live web search.
+// Static catalogue of popular topic categories (Bible stories, ELI5, etc.).
+// Public — no auth required, since the labels are part of the marketing
+// surface and used in onboarding flows too.
+automationRouter.get('/topic-categories', (_req, res) => {
+  res.json({ categories: listTopicCategories() });
+});
+
+const VALID_LANGUAGES: ProjectLanguage[] = [
+  'ta', 'en', 'hi', 'kn', 'te', 'ml', 'bn', 'mr', 'gu', 'pa',
+];
+
+// AI topic suggestions — Perplexity Sonar grounded in live web search
+// (or evergreen knowledge for non-news categories).
 automationRouter.post('/generate-topics', async (req: Request, res: Response) => {
   const body = req.body as {
     language?: ProjectLanguage;
     niche?: string;
     count?: number;
+    category?: TopicCategory;
   };
 
   const language = body.language ?? 'ta';
-  if (language !== 'ta' && language !== 'en' && language !== 'hi') {
-    res.status(400).json({ error: 'language must be ta, en, or hi' });
+  if (!VALID_LANGUAGES.includes(language)) {
+    res.status(400).json({ error: `language must be one of ${VALID_LANGUAGES.join(', ')}` });
     return;
   }
 
@@ -439,6 +456,7 @@ automationRouter.post('/generate-topics', async (req: Request, res: Response) =>
       language,
       niche: body.niche,
       count: body.count,
+      category: body.category,
     });
     res.json({ topics });
   } catch (e) {
