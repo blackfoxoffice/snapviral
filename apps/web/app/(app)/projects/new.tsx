@@ -305,7 +305,10 @@ export default function NewProject() {
                 <VoicePicker language={language} value={voiceId} onChange={setVoiceId} />
               </Card.Body>
               <Card.Footer>
-                <View className={`flex-row ${isMobile ? 'gap-2' : 'justify-between'}`}>
+                <View
+                  className={!isMobile ? 'flex-row justify-between' : ''}
+                  style={isMobile ? { flexDirection: 'column-reverse', gap: 8 } : undefined}
+                >
                   <Button
                     variant="secondary"
                     onPress={() => setCurrent(0)}
@@ -370,7 +373,10 @@ export default function NewProject() {
                 </View>
               </Card.Body>
               <Card.Footer>
-                <View className={`flex-row ${isMobile ? 'gap-2' : 'justify-between'}`}>
+                <View
+                  className={!isMobile ? 'flex-row justify-between' : ''}
+                  style={isMobile ? { flexDirection: 'column-reverse', gap: 8 } : undefined}
+                >
                   <Button
                     variant="secondary"
                     onPress={() => setCurrent(1)}
