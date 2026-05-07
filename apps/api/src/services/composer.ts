@@ -210,23 +210,30 @@ async function finalMux(args: {
   if (caps.subtitles) {
     // Movie-style captions, bottom of frame, language-aware font.
     //
-    //   FontName     — Noto Sans Tamil / Devanagari / Sans (installed in Docker)
-    //   FontSize     — 22 pt — small, readable, doesn't dominate the 1080×1920 frame
-    //   PrimaryColour — pure white
-    //   OutlineColour — black (subtle stroke for legibility on bright backgrounds)
-    //   BorderStyle=1 — outline + shadow (vs 3 = boxed background)
-    //   Outline=1.5   — thin black stroke around glyphs
-    //   Shadow=1      — small drop shadow for readability on busy footage
-    //   Alignment=2   — bottom-center
-    //   MarginV=80    — bottom margin (above device's bottom-bar / safe area)
-    //   MarginL/R=80  — side padding so long lines wrap nicely
+    // CRITICAL: original_size=${WIDTH}x${HEIGHT} — without this libass uses its
+    // default 384×288 canvas, so any FontSize/Outline/Margin values get scaled
+    // up ~6.7× on a 1080×1920 frame (which is why FontSize=22 was producing
+    // ~150px-tall text in the middle of the screen). With original_size set,
+    // every numeric value below is in real video pixels.
+    //
+    //   FontName       — Noto Sans Tamil / Devanagari / Sans (installed in Docker)
+    //   FontSize=44    — 44px on 1920 ≈ 2.3% frame height; small movie-style
+    //   PrimaryColour  — pure white
+    //   OutlineColour  — black, thin stroke for legibility on bright backgrounds
+    //   BorderStyle=1  — outline + shadow (vs 3 = boxed background)
+    //   Outline=2.5    — black stroke around glyphs (in real px)
+    //   Shadow=1       — small drop shadow
+    //   Alignment=2    — bottom-center
+    //   MarginV=160    — ~8% from bottom; clears device home bar
+    //   MarginL/R=80   — side padding so long lines wrap on phone widths
+    //   WrapStyle=2    — smart wrap, no manual breaks
     const fontName = SUBTITLE_FONT_BY_LANG[args.language] ?? 'Noto Sans';
     const subs =
-      `subtitles=${escapeForFilter(args.srtPath)}:force_style='` +
-      `FontName=${fontName},FontSize=22,` +
+      `subtitles=${escapeForFilter(args.srtPath)}:original_size=${WIDTH}x${HEIGHT}:force_style='` +
+      `FontName=${fontName},FontSize=44,` +
       `PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BackColour=&H00000000&,` +
-      `BorderStyle=1,Outline=1.5,Shadow=1,Alignment=2,` +
-      `MarginV=80,MarginL=80,MarginR=80,WrapStyle=2'`;
+      `BorderStyle=1,Outline=2.5,Shadow=1,Alignment=2,` +
+      `MarginV=160,MarginL=80,MarginR=80,WrapStyle=2'`;
     filters.push(subs);
   }
 
