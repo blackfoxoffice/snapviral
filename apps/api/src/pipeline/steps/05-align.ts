@@ -79,8 +79,16 @@ export function chunkAlignment(
 export function cuesToSrt(
   cues: { start: number; end: number; text: string }[],
 ): string {
+  // Prefix every line with {\an2} — ASS override tag for "bottom-center
+  // alignment". libass parses these tags when converting SRT to ASS at
+  // render time. This forces position regardless of any default style
+  // libass would otherwise pick when MarginV/Alignment from force_style
+  // get ignored.
   return cues
-    .map((c, i) => `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}\n`)
+    .map(
+      (c, i) =>
+        `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n{\\an2}${c.text}\n`,
+    )
     .join('\n');
 }
 

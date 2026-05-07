@@ -217,23 +217,23 @@ async function finalMux(args: {
     // every numeric value below is in real video pixels.
     //
     //   FontName       — Noto Sans Tamil / Devanagari / Sans (installed in Docker)
-    //   FontSize=30    — 30px on 1920 ≈ 1.55% frame height; Netflix-style subtitle
+    //   FontSize=22    — 22px on 1920 ≈ 1.15% frame height; tiny subtitle
     //   PrimaryColour  — pure white
-    //   OutlineColour  — black, thin stroke for legibility on bright backgrounds
+    //   OutlineColour  — black, thin stroke for legibility
     //   BorderStyle=1  — outline + shadow (vs 3 = boxed background)
-    //   Outline=2      — black stroke around glyphs (real px)
-    //   Shadow=0       — no drop shadow; cleaner at this small size
-    //   Alignment=2    — bottom-center
-    //   MarginV=90     — sits ~5% from bottom edge, real subtitle position
-    //   MarginL/R=60   — side padding so long lines wrap nicely on phone widths
+    //   Outline=1.5    — thin black stroke
+    //   Shadow=0       — none at this small size
+    //   Alignment=2    — bottom-center (also reinforced per-line via {\an2})
+    //   MarginV=50     — only 50px from bottom edge, true subtitle anchor
+    //   MarginL/R=60   — horizontal padding for wrap
     //   WrapStyle=2    — smart wrap
     const fontName = SUBTITLE_FONT_BY_LANG[args.language] ?? 'Noto Sans';
     const subs =
       `subtitles=${escapeForFilter(args.srtPath)}:original_size=${WIDTH}x${HEIGHT}:force_style='` +
-      `FontName=${fontName},FontSize=30,` +
+      `FontName=${fontName},FontSize=22,` +
       `PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BackColour=&H00000000&,` +
-      `BorderStyle=1,Outline=2,Shadow=0,Alignment=2,` +
-      `MarginV=90,MarginL=60,MarginR=60,WrapStyle=2'`;
+      `BorderStyle=1,Outline=1.5,Shadow=0,Alignment=2,` +
+      `MarginV=50,MarginL=60,MarginR=60,WrapStyle=2'`;
     filters.push(subs);
   }
 
