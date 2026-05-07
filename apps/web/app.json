@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Newsflow Studio",
-    "slug": "newsflow-studio",
+    "name": "SnapViral",
+    "slug": "snapviral",
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "newsflow",
@@ -28,8 +28,8 @@
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/favicon.png",
-      "name": "Newsflow Studio",
-      "shortName": "Newsflow",
+      "name": "SnapViral",
+      "shortName": "SnapViral",
       "themeColor": "#FF0033",
       "backgroundColor": "#FFFFFF",
       "display": "standalone"

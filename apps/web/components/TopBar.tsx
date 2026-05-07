@@ -3,7 +3,7 @@ import { Search, Menu } from 'lucide-react-native';
 import { Input } from './ui/Input';
 import { useAuth } from '../lib/auth';
 import { useSidebarCollapsed } from '../lib/sidebar';
-import { NewsflowLogo } from './icons/NewsflowLogo';
+import { SnapViralLogo } from './icons/SnapViralLogo';
 
 export function TopBar() {
   const { user } = useAuth();
@@ -19,9 +19,12 @@ export function TopBar() {
   return (
     <View className="h-12 flex-row items-center justify-between border-b border-surface-border bg-surface-sunken px-4">
       {isMobile ? (
-        <View className="flex-row items-center gap-2.5">
-          <NewsflowLogo size={24} />
-          <Text className="text-[14px] font-bold text-ink tracking-tight">Newsflow</Text>
+        <View className="flex-row items-center gap-2">
+          <SnapViralLogo size={24} />
+          <View className="flex-row items-baseline">
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', letterSpacing: -0.4 }}>Snap</Text>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#E53935', letterSpacing: -0.4, fontStyle: 'italic' }}>Viral</Text>
+          </View>
         </View>
       ) : (
         <View className="flex-1 max-w-xs">

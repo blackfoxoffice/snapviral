@@ -28,7 +28,7 @@ export default function AdminUsers() {
           Users
         </Text>
         <Text className="text-[13px] text-ink-muted mb-6">
-          Everyone with an account on this Newsflow Studio instance.
+          Everyone with an account on this SnapViral instance.
         </Text>
 
         <Card variant="flat">

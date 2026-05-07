@@ -102,35 +102,46 @@ export default function Dashboard() {
           <EmptyStudio onNew={() => router.push('/projects/new')} />
         ) : (
           <View className="gap-5">
-            {/* Hero metric strip */}
+            {/* Hero metric strip — modernized with subtle gradient + shadow */}
             <View
               className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E4E7' }}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1,
+                borderColor: '#E4E4E7',
+                shadowColor: '#0F172A',
+                shadowOpacity: 0.04,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 4 },
+                // Subtle red wash at the top edge to tie the section to the brand
+                backgroundImage:
+                  'linear-gradient(180deg, rgba(229,57,53,0.025) 0%, rgba(255,255,255,1) 60%)' as any,
+              }}
             >
               <View className={`${isMobile ? 'gap-0' : 'flex-row'}`}>
                 <HeroMetric
                   number={stats?.ready_projects ?? 0}
                   label="videos ready"
-                  accent="#00E676"
+                  accent="#10B981"
                   isMobile={isMobile}
                   first
                 />
                 <HeroMetric
                   number={stats?.published_to_youtube ?? 0}
                   label="published"
-                  accent="#FF1744"
+                  accent="#E53935"
                   isMobile={isMobile}
                 />
                 <HeroMetric
                   number={formatDuration(stats?.total_voiceover_seconds ?? 0)}
                   label="total content"
-                  accent="#42A5F5"
+                  accent="#3B82F6"
                   isMobile={isMobile}
                 />
                 <HeroMetric
                   number={stats?.created_this_month ?? 0}
                   label="this month"
-                  accent="#FFB300"
+                  accent="#F59E0B"
                   isMobile={isMobile}
                 />
               </View>

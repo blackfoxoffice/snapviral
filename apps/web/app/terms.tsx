@@ -1,7 +1,7 @@
 import { ScrollView, View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import { NewsflowLogo } from '../components/icons/NewsflowLogo';
+import { SnapViralLogo } from '../components/icons/SnapViralLogo';
 
 export default function Terms() {
   const router = useRouter();
@@ -23,8 +23,8 @@ export default function Terms() {
         </Pressable>
 
         <View className="flex-row items-center gap-2.5 mb-8">
-          <NewsflowLogo size={28} />
-          <Text className="text-[16px] font-bold text-ink tracking-tight">Newsflow Studio</Text>
+          <SnapViralLogo size={28} />
+          <Text className="text-[16px] font-bold text-ink tracking-tight">SnapViral</Text>
         </View>
 
         <Text className="text-[28px] font-bold text-ink mb-2" style={{ letterSpacing: -0.5 }}>
@@ -33,12 +33,12 @@ export default function Terms() {
         <Text className="text-[12px] text-ink-subtle mb-8">Last updated: May 5, 2026</Text>
 
         <Section title="Acceptance">
-          By creating an account or using Newsflow Studio, you agree to these terms. If you don't
+          By creating an account or using SnapViral, you agree to these terms. If you don't
           agree, don't use the service.
         </Section>
 
         <Section title="What the service does">
-          Newsflow Studio is a creator tool that turns text inputs (topics, scripts, public source
+          SnapViral is a creator tool that turns text inputs (topics, scripts, public source
           URLs) into short videos. You can preview the output, edit metadata, and publish or
           schedule uploads to a YouTube channel you own.
         </Section>
@@ -50,7 +50,7 @@ export default function Terms() {
         </Section>
 
         <Section title="Acceptable use">
-          You may not use Newsflow Studio to create content that:
+          You may not use SnapViral to create content that:
           <Bullet>Violates copyright or other intellectual property rights.</Bullet>
           <Bullet>Constitutes hate speech, harassment, or incites violence.</Bullet>
           <Bullet>Spreads disinformation, deceptive deepfakes, or fabricated quotes attributed to real people.</Bullet>
@@ -66,14 +66,14 @@ export default function Terms() {
         </Section>
 
         <Section title="YouTube uploads">
-          When you connect your YouTube channel, you authorize Newsflow Studio to upload, schedule,
+          When you connect your YouTube channel, you authorize SnapViral to upload, schedule,
           or set metadata on videos you explicitly publish from this app. We do not auto-publish
           anything you didn't queue. You can revoke access from the Settings page or directly from{' '}
           <Link href="https://myaccount.google.com/permissions">Google Account permissions</Link>.
         </Section>
 
         <Section title="Your content, your responsibility">
-          You retain ownership of the videos you generate. You grant Newsflow Studio only the limited
+          You retain ownership of the videos you generate. You grant SnapViral only the limited
           rights needed to store, process, and upload that content on your behalf. You confirm that
           you have all necessary rights to the topics, scripts, and source URLs you submit.
         </Section>
@@ -86,7 +86,7 @@ export default function Terms() {
         </Section>
 
         <Section title="Limitation of liability">
-          To the maximum extent permitted by law, Newsflow Studio's total liability is limited to
+          To the maximum extent permitted by law, SnapViral's total liability is limited to
           the amount you paid us in the prior 12 months (or USD 50 if free).
         </Section>
 

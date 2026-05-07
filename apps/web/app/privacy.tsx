@@ -1,7 +1,7 @@
 import { ScrollView, View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import { NewsflowLogo } from '../components/icons/NewsflowLogo';
+import { SnapViralLogo } from '../components/icons/SnapViralLogo';
 
 export default function Privacy() {
   const router = useRouter();
@@ -23,8 +23,8 @@ export default function Privacy() {
         </Pressable>
 
         <View className="flex-row items-center gap-2.5 mb-8">
-          <NewsflowLogo size={28} />
-          <Text className="text-[16px] font-bold text-ink tracking-tight">Newsflow Studio</Text>
+          <SnapViralLogo size={28} />
+          <Text className="text-[16px] font-bold text-ink tracking-tight">SnapViral</Text>
         </View>
 
         <Text className="text-[28px] font-bold text-ink mb-2" style={{ letterSpacing: -0.5 }}>
@@ -33,7 +33,7 @@ export default function Privacy() {
         <Text className="text-[12px] text-ink-subtle mb-8">Last updated: May 5, 2026</Text>
 
         <Section title="Overview">
-          Newsflow Studio is a video-creation tool that helps creators turn news topics, scripts, or
+          SnapViral is a video-creation tool that helps creators turn news topics, scripts, or
           public source URLs into short-form videos suitable for YouTube Shorts. This policy
           describes what data we collect, how we use it, and the rights you have over it.
         </Section>
@@ -56,7 +56,7 @@ export default function Privacy() {
         </Section>
 
         <Section title="How we use YouTube data">
-          When you connect your YouTube account, Newsflow Studio uses Google's YouTube Data API v3
+          When you connect your YouTube account, SnapViral uses Google's YouTube Data API v3
           strictly to: (a) read your channel name/ID for display, and (b) upload videos you
           explicitly choose to publish or schedule. We do not read your watch history, subscriptions,
           comments, or analytics. Use of YouTube data is governed by{' '}

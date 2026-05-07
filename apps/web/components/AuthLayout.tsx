@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
 import type { ReactNode } from 'react';
-import { NewsflowLogo } from './icons/NewsflowLogo';
+import { SnapViralLogo } from './icons/SnapViralLogo';
 
 interface AuthLayoutProps {
   title: string;
@@ -25,11 +25,12 @@ export function AuthSplitLayout({ title, subtitle, children, footer }: AuthLayou
         className="flex-1"
       >
         <View className="mx-auto w-full" style={{ maxWidth: isMobile ? undefined : 380 }}>
-          <View className="mb-8 flex-row items-center gap-2.5">
-            <NewsflowLogo size={32} />
-            <Text className="text-[16px] font-bold text-ink tracking-tight">
-              Newsflow
-            </Text>
+          <View className="mb-8 flex-row items-center" style={{ gap: 10 }}>
+            <SnapViralLogo size={32} />
+            <View className="flex-row items-baseline">
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 }}>Snap</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#E53935', letterSpacing: -0.5, fontStyle: 'italic' }}>Viral</Text>
+            </View>
           </View>
           <Text
             className={`font-bold text-ink tracking-tight mb-1.5 ${isMobile ? 'text-[24px]' : 'text-[28px]'}`}

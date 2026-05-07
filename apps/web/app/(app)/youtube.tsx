@@ -296,7 +296,7 @@ function DisconnectedView({ onConnect, connecting }: { onConnect: () => void; co
         {connecting ? 'Connecting…' : 'Connect YouTube channel'}
       </Text>
       <Text className="text-[12px] text-ink-muted mt-1 text-center max-w-[360px]">
-        Sign in with Google to authorize Newsflow Studio to upload and schedule videos on your channel.
+        Sign in with Google to authorize SnapViral to upload and schedule videos on your channel.
       </Text>
     </Pressable>
   );

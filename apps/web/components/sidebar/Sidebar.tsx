@@ -19,7 +19,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { useIsAdmin } from '../../lib/admin';
-import { NewsflowLogo } from '../icons/NewsflowLogo';
+import { SnapViralLogo } from '../icons/SnapViralLogo';
 import { useSidebarCollapsed } from '../../lib/sidebar';
 
 interface NavItem {
@@ -70,16 +70,27 @@ export function Sidebar() {
       className="h-screen bg-nav"
       style={{ width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
     >
-      {/* Logo */}
+      {/* Logo / wordmark */}
       <View
         className="flex-row items-center px-4 pt-5 pb-6"
         style={{ gap: collapsed ? 0 : 10 }}
       >
-        <NewsflowLogo size={collapsed ? 32 : 28} />
+        <SnapViralLogo size={collapsed ? 32 : 30} />
         {!collapsed ? (
-          <Text className="text-[16px] font-bold text-white tracking-tight">
-            Newsflow
-          </Text>
+          <View className="flex-row items-baseline">
+            <Text
+              className="font-extrabold text-white"
+              style={{ fontSize: 16, letterSpacing: -0.5, lineHeight: 18 }}
+            >
+              Snap
+            </Text>
+            <Text
+              className="font-extrabold"
+              style={{ fontSize: 16, letterSpacing: -0.5, lineHeight: 18, color: '#FF4D4F', fontStyle: 'italic' }}
+            >
+              Viral
+            </Text>
+          </View>
         ) : null}
       </View>
 
