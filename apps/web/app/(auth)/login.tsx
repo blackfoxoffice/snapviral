@@ -61,6 +61,13 @@ export default function Login() {
           autoComplete="password"
           error={error ?? undefined}
         />
+        <View className="flex-row justify-end -mt-1">
+          <Link href={'/forgot-password' as any} asChild>
+            <Pressable>
+              <Text className="text-[12px] text-ink-secondary font-medium">Forgot password?</Text>
+            </Pressable>
+          </Link>
+        </View>
         <View className="mt-1">
           <Button onPress={handleSubmit} loading={loading} block size="lg">
             Sign in

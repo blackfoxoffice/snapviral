@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { CheckCircle2, Mail } from 'lucide-react-native';
 import { AuthSplitLayout } from '../../components/AuthLayout';
 import { Button, Input, toast } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
@@ -8,7 +9,7 @@ import { signupSchema } from '@newsflow/shared';
 
 export default function Signup() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, resendConfirmation } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,6 +17,8 @@ export default function Signup() {
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<{ email: string } | null>(null);
+  const [resending, setResending] = useState(false);
 
   async function handleSubmit() {
     setErrors({});
@@ -40,19 +43,92 @@ export default function Signup() {
     }
     setLoading(true);
     try {
-      await signUp({
+      const result = await signUp({
         email: parsed.data.email,
         password: parsed.data.password,
         full_name: parsed.data.full_name,
         phone: parsed.data.phone ?? undefined,
       });
-      toast.success('Account created', 'Check your inbox to confirm, then sign in.');
-      router.replace('/login');
+      if (result.needsEmailConfirm) {
+        // Email confirmation is enabled — show the "check inbox" state.
+        setPending({ email: parsed.data.email });
+      } else {
+        // Email confirmation disabled — straight to dashboard.
+        toast.success('Account created');
+        router.replace('/dashboard');
+      }
     } catch (e) {
       setErrors({ form: e instanceof Error ? e.message : 'Signup failed' });
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResend() {
+    if (!pending) return;
+    setResending(true);
+    try {
+      await resendConfirmation(pending.email);
+      toast.success('Email sent', `New verification link on the way to ${pending.email}`);
+    } catch (e) {
+      toast.error('Could not resend', e instanceof Error ? e.message : undefined);
+    } finally {
+      setResending(false);
+    }
+  }
+
+  if (pending) {
+    return (
+      <AuthSplitLayout
+        title="Confirm your email"
+        subtitle="One last step. We sent a verification link."
+        footer={
+          <Text className="text-[13px] text-ink-muted text-center">
+            Already verified?{' '}
+            <Link href="/login" asChild>
+              <Pressable>
+                <Text className="text-brand font-semibold">Sign in</Text>
+              </Pressable>
+            </Link>
+          </Text>
+        }
+      >
+        <View className="gap-5 items-center py-4">
+          <View
+            className="items-center justify-center rounded-full"
+            style={{ width: 56, height: 56, backgroundColor: 'rgba(225,29,44,0.10)' }}
+          >
+            <Mail size={26} color="#E11D2C" />
+          </View>
+          <View className="items-center gap-2">
+            <Text className="text-[16px] font-semibold text-ink text-center">
+              Check your inbox
+            </Text>
+            <Text className="text-[13px] text-ink-muted text-center max-w-[340px] leading-relaxed">
+              We sent a verification link to{' '}
+              <Text className="font-semibold text-ink">{pending.email}</Text>. Click it to finish
+              setting up your account. Links expire in 24 hours.
+            </Text>
+          </View>
+          <View className="w-full max-w-[300px] gap-2">
+            <Button
+              onPress={handleResend}
+              loading={resending}
+              variant="secondary"
+              block
+              size="md"
+            >
+              Resend verification email
+            </Button>
+            <Pressable onPress={() => setPending(null)}>
+              <Text className="text-[12px] text-ink-subtle text-center">
+                Used the wrong email? Try again
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </AuthSplitLayout>
+    );
   }
 
   return (

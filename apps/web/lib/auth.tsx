@@ -12,8 +12,20 @@ interface AuthState {
     password: string;
     full_name: string;
     phone?: string;
-  }) => Promise<void>;
+  }) => Promise<{ needsEmailConfirm: boolean }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  resendConfirmation: (email: string) => Promise<void>;
+}
+
+// Returns the absolute URL we want Supabase to bounce verification /
+// recovery links back to. Falls back to a sensible default for SSR builds.
+function siteOrigin(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return process.env.EXPO_PUBLIC_SITE_URL ?? 'https://app.snapviral.in';
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -48,15 +60,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
       },
       async signUp({ email, password, full_name, phone }) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name, phone: phone ?? null } },
+          options: {
+            data: { full_name, phone: phone ?? null },
+            // Where Supabase bounces the user *after* they click the
+            // verification link in their inbox.
+            emailRedirectTo: `${siteOrigin()}/auth/confirm`,
+          },
         });
         if (error) throw error;
+        // If email confirmation is enabled (production default), there's
+        // no session yet — the caller should show a "check your inbox"
+        // screen instead of redirecting straight to /dashboard.
+        return { needsEmailConfirm: !data.session };
       },
       async signOut() {
         await supabase.auth.signOut();
+      },
+      async resetPassword(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${siteOrigin()}/auth/reset-password`,
+        });
+        if (error) throw error;
+      },
+      async updatePassword(newPassword) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      },
+      async resendConfirmation(email) {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email,
+          options: { emailRedirectTo: `${siteOrigin()}/auth/confirm` },
+        });
+        if (error) throw error;
       },
     }),
     [session, loading],
