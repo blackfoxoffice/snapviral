@@ -1,9 +1,25 @@
 {
-  "buildCommand": "cd apps/web && npx expo export --platform web",
+  "buildCommand": "cd apps/web && npx expo export --platform web && node scripts/inject-pwa.mjs",
   "outputDirectory": "apps/web/dist",
   "installCommand": "npm install -g pnpm && pnpm install",
   "framework": null,
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        { "key": "Content-Type", "value": "application/manifest+json" },
+        { "key": "Cache-Control", "value": "public, max-age=300" }
+      ]
+    }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!sw\\.js|manifest\\.webmanifest|icons/.*|_expo/.*|favicon\\.ico|robots\\.txt).*)", "destination": "/index.html" }
   ]
 }

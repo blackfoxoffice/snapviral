@@ -7,7 +7,7 @@
     "dev": "expo start --web --port 3000",
     "start": "expo start",
     "web": "expo start --web --port 3000",
-    "build": "expo export --platform web",
+    "build": "expo export --platform web && node scripts/inject-pwa.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx"
   },
