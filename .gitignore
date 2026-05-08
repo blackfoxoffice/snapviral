@@ -42,3 +42,7 @@ application-*.apk
 
 # claude code runtime
 .claude/scheduled_tasks.lock
+
+# WhatsApp / chat-shared images dropped at the repo root
+WhatsApp Image *
+WhatsApp\ Image\ *
