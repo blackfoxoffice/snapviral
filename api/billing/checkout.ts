@@ -9,7 +9,7 @@ import {
   type Plan,
   type VercelRequest,
   type VercelResponse,
-} from '../_lib.js';
+} from '../_lib';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return fail(res, 405, 'method_not_allowed');
