@@ -291,6 +291,98 @@ adminRouter.patch('/users/:id/admin', async (req: Request, res: Response) => {
   res.json(data);
 });
 
+// =====================================================================
+// Billing — admin overview of every user's subscription, usage, payments.
+// Backed by the public.admin_user_billing rollup view + payments table.
+// =====================================================================
+
+adminRouter.get('/billing/overview', async (_req: Request, res: Response) => {
+  const supa = getServiceClient();
+  const { data: rows, error } = await supa
+    .from('admin_user_billing')
+    .select('*')
+    .order('user_created_at', { ascending: false });
+  if (error) throw error;
+
+  let last30Usd = 0;
+  let last30Inr = 0;
+  let activePaid = 0;
+  let pastDue = 0;
+  let trialing = 0;
+  let canceled = 0;
+  for (const r of rows ?? []) {
+    const row = r as { plan?: string; plan_status?: string };
+    if (row.plan && row.plan !== 'free' && row.plan_status === 'active') activePaid++;
+    if (row.plan_status === 'past_due') pastDue++;
+    if (row.plan_status === 'trialing') trialing++;
+    if (row.plan_status === 'canceled') canceled++;
+  }
+
+  // Sum of succeeded payments, grouped by currency, last 30 days.
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recent } = await supa
+    .from('payments')
+    .select('amount_minor, currency')
+    .eq('status', 'succeeded')
+    .gte('occurred_at', since);
+  for (const r of recent ?? []) {
+    const row = r as { amount_minor: number; currency: string };
+    if (row.currency === 'USD') last30Usd += row.amount_minor;
+    if (row.currency === 'INR') last30Inr += row.amount_minor;
+  }
+
+  res.json({
+    rows: rows ?? [],
+    totals: {
+      users: (rows ?? []).length,
+      activePaid,
+      pastDue,
+      trialing,
+      canceled,
+      last30dUsdMinor: last30Usd,
+      last30dInrMinor: last30Inr,
+    },
+  });
+});
+
+adminRouter.get('/billing/payments', async (req: Request, res: Response) => {
+  const supa = getServiceClient();
+  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  const userId = typeof req.query.user_id === 'string' ? req.query.user_id : null;
+  let q = supa
+    .from('payments')
+    .select(
+      'id, user_id, amount_minor, currency, status, plan, description, receipt_url, invoice_url, payment_method, failure_reason, occurred_at, dodo_payment_id, dodo_customer_id',
+    )
+    .order('occurred_at', { ascending: false })
+    .limit(limit);
+  if (userId) q = q.eq('user_id', userId);
+  const { data, error } = await q;
+  if (error) throw error;
+
+  const ids = Array.from(new Set((data ?? []).map((r) => (r as { user_id: string | null }).user_id).filter(Boolean))) as string[];
+  const emailById = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: profs } = await supa
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', ids);
+    for (const p of profs ?? []) {
+      const row = p as { id: string; email: string; full_name: string | null };
+      emailById.set(row.id, row.email);
+    }
+  }
+  const out = (data ?? []).map((r) => {
+    const row = r as Record<string, unknown> & { user_id: string | null };
+    return {
+      ...row,
+      email: row.user_id ? emailById.get(row.user_id) ?? null : null,
+    };
+  });
+
+  res.json({ payments: out });
+});
+
 // Hard-delete a user. Cascades through public.profiles + auth.users + every
 // FK with on-delete cascade (projects, topic_queue, notification_reads, etc).
 adminRouter.delete('/users/:id', async (req: Request, res: Response) => {

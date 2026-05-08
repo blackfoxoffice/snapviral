@@ -1,6 +1,9 @@
 import { supabase } from './supabase';
 import type {
+  AdminBillingRow,
+  AdminBillingTotals,
   AdminOverview,
+  AdminPaymentRow,
   AdminSecret,
   AppNotification,
   AutomationSettings,
@@ -10,6 +13,7 @@ import type {
   Currency,
   NotificationAudience,
   NotificationKind,
+  PaymentReceipt,
   Plan,
   PlanDef,
   Project,
@@ -376,6 +380,33 @@ export const api = {
       headers: await authHeaders(),
     });
     return parseResponse<{ url: string }>(res);
+  },
+
+  async listMyPayments(): Promise<{ payments: PaymentReceipt[] }> {
+    const res = await fetch(`${BASE_URL}/api/billing/payments`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
+  // ===== Admin billing =====
+
+  async getAdminBillingOverview(): Promise<{ rows: AdminBillingRow[]; totals: AdminBillingTotals }> {
+    const res = await fetch(`${BASE_URL}/api/admin/billing/overview`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
+  async listAdminPayments(args?: { userId?: string; limit?: number }): Promise<{ payments: AdminPaymentRow[] }> {
+    const params = new URLSearchParams();
+    if (args?.userId) params.set('user_id', args.userId);
+    if (args?.limit) params.set('limit', String(args.limit));
+    const qs = params.toString();
+    const res = await fetch(`${BASE_URL}/api/admin/billing/payments${qs ? '?' + qs : ''}`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
   },
 
   // ===== Automation =====

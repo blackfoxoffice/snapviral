@@ -241,6 +241,63 @@ export interface ProjectWithRelations extends Project {
 }
 
 // =====================================================================
+// Payment receipts (Dodo Payments)
+// =====================================================================
+export type PaymentStatus = 'succeeded' | 'failed' | 'refunded' | 'pending';
+
+export interface PaymentReceipt {
+  id: string;
+  amount_minor: number;
+  currency: string;            // 'USD' | 'INR' (kept loose since Dodo may add more)
+  status: PaymentStatus;
+  plan: string | null;
+  description: string | null;
+  receipt_url: string | null;
+  invoice_url: string | null;
+  payment_method: string | null;
+  failure_reason: string | null;
+  occurred_at: string;
+  dodo_payment_id: string | null;
+}
+
+// Admin-only: payment row joined with the email of the user it belongs to.
+export interface AdminPaymentRow extends PaymentReceipt {
+  user_id: string | null;
+  email: string | null;
+  dodo_customer_id: string | null;
+}
+
+export interface AdminBillingRow {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  plan: string;
+  plan_status: PlanStatus;
+  current_period_end: string | null;
+  dodo_customer_id: string | null;
+  dodo_subscription_id: string | null;
+  is_admin: boolean;
+  user_created_at: string;
+  monthly_video_limit: number;
+  max_duration_seconds: number;
+  used_this_month: number;
+  lifetime_usd_minor: number;
+  lifetime_inr_minor: number;
+  payment_count: number;
+  last_payment_at: string | null;
+}
+
+export interface AdminBillingTotals {
+  users: number;
+  activePaid: number;
+  pastDue: number;
+  trialing: number;
+  canceled: number;
+  last30dUsdMinor: number;
+  last30dInrMinor: number;
+}
+
+// =====================================================================
 // Notifications — admin-broadcast in-app announcements
 // =====================================================================
 export type NotificationKind = 'announcement' | 'marketing' | 'promo' | 'update' | 'maintenance';

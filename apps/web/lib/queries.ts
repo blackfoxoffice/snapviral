@@ -310,6 +310,29 @@ export function useOpenBillingPortal() {
   });
 }
 
+export function useMyPayments() {
+  return useQuery({
+    queryKey: ['billing', 'payments', 'me'] as const,
+    queryFn: api.listMyPayments,
+    staleTime: 30_000,
+  });
+}
+
+export function useAdminBillingOverview() {
+  return useQuery({
+    queryKey: ['billing', 'admin', 'overview'] as const,
+    queryFn: api.getAdminBillingOverview,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useAdminPayments(args?: { userId?: string; limit?: number }) {
+  return useQuery({
+    queryKey: ['billing', 'admin', 'payments', args?.userId ?? 'all', args?.limit ?? 100] as const,
+    queryFn: () => api.listAdminPayments(args),
+  });
+}
+
 // ===== Automation =====
 
 export function useAutomationStatus() {

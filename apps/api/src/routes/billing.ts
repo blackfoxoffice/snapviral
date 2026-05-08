@@ -58,8 +58,21 @@ billingRouter.post(
         status?: string;
         next_billing_date?: string;
         current_period_end?: string;
+        // Payment-event fields
+        payment_id?: string;
+        amount?: number;            // minor units (cents / paise)
+        total_amount?: number;
+        currency?: string;
+        receipt_url?: string;
+        invoice_url?: string;
+        payment_method?: string;
+        failure_reason?: string;
+        created_at?: string;
+        occurred_at?: string;
+        product_cart?: Array<{ product_id?: string }>;
       };
       id?: string;
+      timestamp?: string;
     } = {};
     try {
       event = JSON.parse(rawBody);
@@ -111,12 +124,62 @@ billingRouter.post(
         status: 'canceled',
         currentPeriodEnd: null,
       });
-    } else if (eventType.includes('subscription.failed') || eventType.includes('payment.failed')) {
+    } else if (eventType.includes('subscription.failed')) {
       await applySubscriptionEvent({
         userId,
         plan,
         status: 'past_due',
       });
+    }
+
+    // =====================================================================
+    // Payment receipt events — write a row into public.payments.
+    // We accept any of: payment.succeeded / payment.failed / payment.refunded
+    // (plus the older payment.* variants Dodo may send).
+    // =====================================================================
+    if (eventType.startsWith('payment.') || eventType.includes('invoice.paid')) {
+      const paymentId =
+        event.data?.payment_id ?? event.data?.subscription_id ?? event.id ?? null;
+      const amountMinor = Number(event.data?.total_amount ?? event.data?.amount ?? 0);
+      const currency = (event.data?.currency ?? event.data?.metadata?.currency ?? 'USD').toUpperCase();
+      let payStatus: 'succeeded' | 'failed' | 'refunded' | 'pending' = 'succeeded';
+      if (eventType.includes('failed')) payStatus = 'failed';
+      else if (eventType.includes('refund')) payStatus = 'refunded';
+      else if (eventType.includes('pending')) payStatus = 'pending';
+
+      const occurredAt =
+        event.data?.occurred_at ?? event.data?.created_at ?? event.timestamp ?? new Date().toISOString();
+
+      // Idempotent — onConflict on dodo_payment_id when it's present.
+      const insert = {
+        user_id: userId,
+        dodo_payment_id: paymentId,
+        dodo_subscription_id: event.data?.subscription_id ?? null,
+        dodo_customer_id: event.data?.customer?.customer_id ?? null,
+        amount_minor: amountMinor || 0,
+        currency,
+        status: payStatus,
+        plan,
+        description: eventType,
+        receipt_url: event.data?.receipt_url ?? null,
+        invoice_url: event.data?.invoice_url ?? null,
+        payment_method: event.data?.payment_method ?? null,
+        failure_reason: event.data?.failure_reason ?? null,
+        metadata: event.data?.metadata ?? {},
+        occurred_at: occurredAt,
+      };
+      if (paymentId) {
+        await supa.from('payments').upsert(insert, { onConflict: 'dodo_payment_id' });
+      } else {
+        await supa.from('payments').insert(insert);
+      }
+
+      // Also bump plan_status to past_due on payment failure so the user UI
+      // surfaces it immediately (the subscription.failed path may not fire
+      // if the failure happens at one-off payment time).
+      if (payStatus === 'failed') {
+        await applySubscriptionEvent({ userId, plan, status: 'past_due' });
+      }
     }
 
     res.status(200).send('ok');
@@ -208,4 +271,25 @@ billingRouter.post('/portal', async (req: Request, res: Response) => {
     console.error('[billing] portal error', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'portal failed' });
   }
+});
+
+// =====================================================================
+// User payment receipts — most recent first.
+// =====================================================================
+billingRouter.get('/payments', async (req: Request, res: Response) => {
+  const { user } = req as AuthedRequest;
+  const supa = getServiceClient();
+  const { data, error } = await supa
+    .from('payments')
+    .select(
+      'id, amount_minor, currency, status, plan, description, receipt_url, invoice_url, payment_method, failure_reason, occurred_at, dodo_payment_id',
+    )
+    .eq('user_id', user.id)
+    .order('occurred_at', { ascending: false })
+    .limit(100);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ payments: data ?? [] });
 });

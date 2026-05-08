@@ -30,6 +30,7 @@ import {
   X,
   ExternalLink,
   Shield,
+  CreditCard,
 } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { useIsAdmin } from '../../lib/admin';
@@ -92,7 +93,10 @@ const NAV: NavSection[] = [
   },
   {
     label: 'People',
-    items: [{ href: '/admin/users', label: 'Users', Icon: Users }],
+    items: [
+      { href: '/admin/users', label: 'Users', Icon: Users },
+      { href: '/admin/billing', label: 'Billing', Icon: CreditCard },
+    ],
   },
   {
     label: 'System',
@@ -109,6 +113,7 @@ const PATH_LABELS: Record<string, string> = {
   '/admin/blog': 'Blog',
   '/admin/notifications': 'Notifications',
   '/admin/users': 'Users',
+  '/admin/billing': 'Billing',
   '/admin/secrets': 'Secrets',
   '/admin/audit': 'Audit log',
 };

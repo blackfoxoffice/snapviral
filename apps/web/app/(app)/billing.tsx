@@ -11,7 +11,10 @@ import {
   useBillingMe,
   useCreateBillingCheckout,
   useOpenBillingPortal,
+  useMyPayments,
 } from '../../lib/queries';
+import { Receipt, ExternalLink, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react-native';
+import type { PaymentReceipt, PaymentStatus } from '@newsflow/shared';
 
 const PLAN_ICONS: Record<Plan, any> = {
   free: Sparkles,
@@ -137,6 +140,9 @@ export default function BillingPage() {
         ) : me ? (
           <CurrentPlanCard me={me} onManage={handleManage} portalLoading={portalMut.isPending} />
         ) : null}
+
+        <ReceiptsCard />
+
 
         {/* Currency toggle */}
         <View className="flex-row items-center justify-center mb-6">
@@ -394,5 +400,121 @@ function PlanCard({
         </View>
       </View>
     </Card>
+  );
+}
+
+// =====================================================================
+// Receipts (user-side payment history)
+// =====================================================================
+function ReceiptsCard() {
+  const { data, isLoading } = useMyPayments();
+  const payments = data?.payments ?? [];
+
+  return (
+    <View
+      className="rounded-2xl bg-surface-card border border-surface-border p-5 mb-6"
+      style={{ borderColor: '#E4E4E7' }}
+    >
+      <View className="flex-row items-center justify-between mb-3">
+        <View className="flex-row items-center gap-2">
+          <View
+            className="items-center justify-center rounded-lg"
+            style={{ width: 28, height: 28, backgroundColor: 'rgba(15,23,42,0.06)' }}
+          >
+            <Receipt size={14} color="#0F172A" />
+          </View>
+          <Text className="text-[14px] font-semibold text-ink">Receipts</Text>
+        </View>
+        <Text className="text-[11px] text-ink-subtle">
+          {payments.length === 0 ? 'No payments yet' : `${payments.length} on record`}
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <View className="py-6 items-center">
+          <ActivityIndicator size="small" color="#E53935" />
+        </View>
+      ) : payments.length === 0 ? (
+        <Text className="text-[12px] text-ink-muted py-3">
+          Once you start a paid plan, every receipt will land here. They sync from Dodo Payments
+          via secure webhook.
+        </Text>
+      ) : (
+        <View className="gap-2">
+          {payments.slice(0, 8).map((p) => (
+            <ReceiptRow key={p.id} payment={p} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function ReceiptRow({ payment }: { payment: PaymentReceipt }) {
+  const fmt = formatPrice(payment.currency as Currency, payment.amount_minor);
+  const when = new Date(payment.occurred_at).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  const status = payment.status;
+  const StatusIcon =
+    status === 'succeeded' ? CheckCircle2 : status === 'refunded' ? RefreshCw : AlertCircle;
+  const statusColor =
+    status === 'succeeded' ? '#16A34A' : status === 'refunded' ? '#0EA5E9' : '#DC2626';
+  const statusBg =
+    status === 'succeeded'
+      ? 'rgba(22,163,74,0.10)'
+      : status === 'refunded'
+        ? 'rgba(14,165,233,0.10)'
+        : 'rgba(220,38,38,0.10)';
+
+  return (
+    <View
+      className="flex-row items-center gap-3 rounded-lg px-3 py-3"
+      style={{ borderWidth: 1, borderColor: '#E4E4E7', backgroundColor: '#FAFAF7' }}
+    >
+      <View
+        className="items-center justify-center rounded-md"
+        style={{ width: 32, height: 32, backgroundColor: statusBg }}
+      >
+        <StatusIcon size={14} color={statusColor} />
+      </View>
+      <View className="flex-1 min-w-0">
+        <View className="flex-row items-center gap-2">
+          <Text className="text-[14px] font-semibold text-ink">{fmt}</Text>
+          <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: statusBg }}>
+            <Text
+              className="text-[9px] font-bold uppercase"
+              style={{ color: statusColor, letterSpacing: 0.6 }}
+            >
+              {status}
+            </Text>
+          </View>
+          {payment.plan ? (
+            <Text className="text-[11px] text-ink-subtle">· {payment.plan}</Text>
+          ) : null}
+        </View>
+        <Text className="text-[11px] text-ink-muted mt-0.5" numberOfLines={1}>
+          {when}
+          {payment.payment_method ? ` · ${payment.payment_method}` : ''}
+          {payment.failure_reason ? ` · ${payment.failure_reason}` : ''}
+        </Text>
+      </View>
+      {payment.receipt_url || payment.invoice_url ? (
+        <Pressable
+          onPress={() => {
+            const url = payment.receipt_url ?? payment.invoice_url ?? '';
+            if (typeof window !== 'undefined' && url) window.open(url, '_blank');
+          }}
+          className="flex-row items-center gap-1 rounded-md px-2.5 py-1.5"
+          style={{ borderWidth: 1, borderColor: '#E4E4E7', backgroundColor: '#FFFFFF' }}
+        >
+          <Text className="text-[11px] font-semibold text-ink-secondary">View</Text>
+          <ExternalLink size={11} color="#475569" />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
