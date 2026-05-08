@@ -2076,7 +2076,6 @@ function Footer({ ctx }: { ctx: Ctx }) {
       links: [
         ['Sign in', '/login'],
         ['Sign up', '/signup'],
-        ['Admin portal', '/admin/login'],
         ['Privacy', '/privacy'],
         ['Terms', '/terms'],
       ],
