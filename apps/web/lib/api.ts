@@ -53,6 +53,14 @@ export interface VoiceOption {
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
 
+// Billing + admin-billing routes live on Vercel as serverless functions on
+// the same origin as the web app. Anything on /api/billing/* and a couple
+// /api/admin/* endpoints are served by Vercel; the rest of the API stays on
+// Railway (BASE_URL above) because the video pipeline needs FFmpeg.
+const BILLING_BASE_URL =
+  process.env.EXPO_PUBLIC_BILLING_API_BASE_URL ??
+  (typeof window !== 'undefined' ? window.location.origin : '');
+
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -353,12 +361,12 @@ export const api = {
   // ===== Billing =====
 
   async listPlans(): Promise<PlanDef[]> {
-    const res = await fetch(`${BASE_URL}/api/billing/plans`, { headers: await authHeaders() });
+    const res = await fetch(`${BILLING_BASE_URL}/api/billing/plans`, { headers: await authHeaders() });
     return parseResponse<PlanDef[]>(res);
   },
 
   async getBillingMe(): Promise<BillingMe> {
-    const res = await fetch(`${BASE_URL}/api/billing/me`, { headers: await authHeaders() });
+    const res = await fetch(`${BILLING_BASE_URL}/api/billing/me`, { headers: await authHeaders() });
     return parseResponse<BillingMe>(res);
   },
 
@@ -366,7 +374,7 @@ export const api = {
     plan: Exclude<Plan, 'free'>;
     currency: Currency;
   }): Promise<{ url: string }> {
-    const res = await fetch(`${BASE_URL}/api/billing/checkout`, {
+    const res = await fetch(`${BILLING_BASE_URL}/api/billing/checkout`, {
       method: 'POST',
       headers: await authHeaders(),
       body: JSON.stringify(args),
@@ -375,7 +383,7 @@ export const api = {
   },
 
   async openBillingPortal(): Promise<{ url: string }> {
-    const res = await fetch(`${BASE_URL}/api/billing/portal`, {
+    const res = await fetch(`${BILLING_BASE_URL}/api/billing/portal`, {
       method: 'POST',
       headers: await authHeaders(),
     });
@@ -383,7 +391,7 @@ export const api = {
   },
 
   async listMyPayments(): Promise<{ payments: PaymentReceipt[] }> {
-    const res = await fetch(`${BASE_URL}/api/billing/payments`, {
+    const res = await fetch(`${BILLING_BASE_URL}/api/billing/payments`, {
       headers: await authHeaders(),
     });
     return parseResponse(res);
@@ -392,7 +400,7 @@ export const api = {
   // ===== Admin billing =====
 
   async getAdminBillingOverview(): Promise<{ rows: AdminBillingRow[]; totals: AdminBillingTotals }> {
-    const res = await fetch(`${BASE_URL}/api/admin/billing/overview`, {
+    const res = await fetch(`${BILLING_BASE_URL}/api/admin/billing/overview`, {
       headers: await authHeaders(),
     });
     return parseResponse(res);
@@ -403,7 +411,7 @@ export const api = {
     if (args?.userId) params.set('user_id', args.userId);
     if (args?.limit) params.set('limit', String(args.limit));
     const qs = params.toString();
-    const res = await fetch(`${BASE_URL}/api/admin/billing/payments${qs ? '?' + qs : ''}`, {
+    const res = await fetch(`${BILLING_BASE_URL}/api/admin/billing/payments${qs ? '?' + qs : ''}`, {
       headers: await authHeaders(),
     });
     return parseResponse(res);

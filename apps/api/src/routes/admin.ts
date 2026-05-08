@@ -2,7 +2,10 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, AuthedRequest } from '../middleware/auth.js';
 import { getServiceClient } from '../services/supabase.js';
 import { invalidateSecretCache } from '../services/secrets.js';
-import { createProductsIfMissing, registerWebhookIfMissing } from '../services/billing.js';
+import {
+  createProductsIfMissing,
+  registerWebhookIfMissing,
+} from '../services/billing.js';
 
 export const adminRouter = Router();
 
@@ -189,9 +192,9 @@ adminRouter.post('/setup-dodo-products', async (_req: Request, res: Response) =>
       ok: true,
       created: result.created,
       existed: result.existed,
+      envVars: result.envVars,
       next_steps: [
-        'Copy the DODO_PRODUCT_* lines from Railway logs',
-        'Add them as env vars on the Railway service',
+        'Set the envVars block on Railway',
         'Wait ~30s for Railway to redeploy',
         'Test checkout on /billing',
       ],
@@ -199,6 +202,31 @@ adminRouter.post('/setup-dodo-products', async (_req: Request, res: Response) =>
   } catch (e) {
     console.error('[admin] setup-dodo-products failed:', e);
     res.status(500).json({ error: e instanceof Error ? e.message : 'setup failed' });
+  }
+});
+
+// Register the live Dodo webhook + return its signing secret. Admin auth.
+adminRouter.post('/setup-dodo-webhook', async (req: Request, res: Response) => {
+  const apiBase =
+    process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://newsflow-api-production-f402.up.railway.app';
+  const explicitUrl = (req.body as { webhook_url?: string } | null)?.webhook_url;
+  const webhookUrl = explicitUrl ?? `${apiBase.replace(/\/$/, '')}/api/billing/webhook`;
+  try {
+    const result = await registerWebhookIfMissing({ webhookUrl });
+    res.json({
+      ok: true,
+      webhook_id: result.webhookId,
+      created: result.created,
+      secret: result.secret,
+      url: webhookUrl,
+      next_steps: [
+        'Set DODO_PAYMENTS_WEBHOOK_KEY=<secret> on Railway',
+        'Wait ~30s for Railway to redeploy',
+      ],
+    });
+  } catch (e) {
+    console.error('[admin] setup-dodo-webhook failed:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'webhook setup failed' });
   }
 });
 
