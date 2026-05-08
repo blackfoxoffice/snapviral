@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, useWindowDimensions, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Plus,
@@ -7,6 +7,8 @@ import {
   Play,
   CircleDot,
   ChevronRight,
+  Smartphone,
+  Download,
 } from 'lucide-react-native';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -39,6 +41,22 @@ function timeAgo(iso: string): string {
 
 const LANG = LANGUAGE_LABEL;
 const SOURCE: Record<string, string> = { urls: 'YouTube', script: 'Script', topic: 'Topic', research: 'Research' };
+
+const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/7vurtBLpnYr2skwMFZqAGX.apk';
+
+function openAndroidApk() {
+  if (Platform.OS === 'web') {
+    const a = document.createElement('a');
+    a.href = ANDROID_APK_URL;
+    a.download = 'snapviral.apk';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } else {
+    Linking.openURL(ANDROID_APK_URL);
+  }
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -258,6 +276,9 @@ export default function Dashboard() {
                     <ArrowRight size={14} color="#546E7A" />
                   </Pressable>
                 </View>
+
+                {/* Get the mobile app */}
+                <DownloadAppCard />
               </View>
             </View>
           </View>
@@ -408,6 +429,49 @@ function EmptyStudio({ onNew }: { onNew: () => void }) {
       >
         Create first project
       </Button>
+      <View style={{ width: '100%', maxWidth: 360, marginTop: 32 }}>
+        <DownloadAppCard />
+      </View>
     </View>
+  );
+}
+
+function DownloadAppCard() {
+  return (
+    <Pressable
+      onPress={openAndroidApk}
+      className="rounded-xl overflow-hidden active:opacity-90"
+      style={{
+        backgroundColor: '#0F172A',
+        padding: 14,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.10)',
+          }}
+        >
+          <Smartphone size={18} color="#FFFFFF" />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
+            Get the SnapViral app
+          </Text>
+          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
+            Android APK · 92 MB
+          </Text>
+        </View>
+        <Download size={16} color="#FFFFFF" />
+      </View>
+      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 10 }}>
+        Direct download. Enable “Install from unknown sources” the first time.
+      </Text>
+    </Pressable>
   );
 }
