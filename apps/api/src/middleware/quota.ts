@@ -30,17 +30,25 @@ export async function enforceVideoQuota(
 
   const supa = getServiceClient();
 
-  const [quotaRes, projectRes] = await Promise.all([
+  const [quotaRes, projectRes, adminRes] = await Promise.all([
     supa
       .from('user_quota')
       .select('plan, plan_status, monthly_video_limit, max_duration_seconds, used_this_month')
       .eq('user_id', user.id)
       .single(),
     supa.from('projects').select('duration_seconds').eq('id', projectId).eq('user_id', user.id).single(),
+    supa.from('profiles').select('is_admin').eq('id', user.id).single(),
   ]);
 
   const quota = quotaRes.data;
   const project = projectRes.data;
+  const isAdmin = Boolean((adminRes.data as { is_admin?: boolean } | null)?.is_admin);
+
+  // Admins bypass all quota + duration limits — unlimited generation.
+  if (isAdmin) {
+    next();
+    return;
+  }
 
   if (!quota || !project) {
     // Don't block — the route handler will return its own 404.
