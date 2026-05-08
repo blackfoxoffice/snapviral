@@ -1,5 +1,5 @@
 import { Webhook } from 'standardwebhooks';
-import { fail, supabaseAnon, type VercelRequest, type VercelResponse } from '../_lib';
+import { fail, supabaseAnon, type VercelRequest, type VercelResponse } from '../_lib.js';
 
 // Vercel function config: keep raw body around for signature verification.
 // If we let Vercel parse JSON, we lose the canonical bytes Dodo signed.

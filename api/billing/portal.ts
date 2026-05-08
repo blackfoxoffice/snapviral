@@ -4,7 +4,7 @@ import {
   requireUser,
   type VercelRequest,
   type VercelResponse,
-} from '../_lib';
+} from '../_lib.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return fail(res, 405, 'method_not_allowed');

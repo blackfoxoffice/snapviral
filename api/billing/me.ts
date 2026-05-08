@@ -1,4 +1,4 @@
-import { fail, requireUser, type VercelRequest, type VercelResponse } from '../_lib';
+import { fail, requireUser, type VercelRequest, type VercelResponse } from '../_lib.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return fail(res, 405, 'method_not_allowed');

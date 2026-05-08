@@ -1,0 +1,6 @@
+{
+  "name": "@newsflow/vercel-api",
+  "private": true,
+  "type": "module",
+  "comment": "Scopes ESM module-resolution to /api so Vercel-compiled function output runs without breaking the rest of the monorepo (apps/web is metro/CJS, apps/api is tsx/TS-via-Node)."
+}
