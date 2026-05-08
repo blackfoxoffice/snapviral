@@ -256,6 +256,30 @@ export function useAdminUsers() {
   });
 }
 
+export function useSetUserAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { userId: string; isAdmin: boolean }) =>
+      api.setUserAdmin(args.userId, args.isAdmin),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminUsers });
+      qc.invalidateQueries({ queryKey: qk.adminOverview });
+    },
+  });
+}
+
+export function useDeleteAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => api.deleteAdminUser(userId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.adminUsers });
+      qc.invalidateQueries({ queryKey: qk.adminOverview });
+      qc.invalidateQueries({ queryKey: qk.adminAuditLog });
+    },
+  });
+}
+
 // ===== Billing =====
 
 export function usePlans() {

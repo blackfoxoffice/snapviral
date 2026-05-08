@@ -75,6 +75,18 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
+  project_count: number;
+  last_sign_in_at: string | null;
+}
+
 export interface DashboardStats {
   total_projects: number;
   ready_projects: number;
@@ -312,9 +324,26 @@ export const api = {
     return parseResponse<SecretAccessLogEntry[]>(res);
   },
 
-  async listAdminUsers(): Promise<Array<{ id: string; email: string; full_name: string; is_admin: boolean; created_at: string }>> {
+  async listAdminUsers(): Promise<AdminUser[]> {
     const res = await fetch(`${BASE_URL}/api/admin/users`, { headers: await authHeaders() });
     return parseResponse(res);
+  },
+
+  async setUserAdmin(userId: string, isAdmin: boolean): Promise<{ id: string; email: string; is_admin: boolean }> {
+    const res = await fetch(`${BASE_URL}/api/admin/users/${userId}/admin`, {
+      method: 'PATCH',
+      headers: await authHeaders(),
+      body: JSON.stringify({ is_admin: isAdmin }),
+    });
+    return parseResponse(res);
+  },
+
+  async deleteAdminUser(userId: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
   },
 
   // ===== Billing =====

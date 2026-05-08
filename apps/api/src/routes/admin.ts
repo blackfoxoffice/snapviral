@@ -218,10 +218,109 @@ adminRouter.get('/audit-log', async (req: Request, res: Response) => {
 // ===== Users =====
 adminRouter.get('/users', async (_req: Request, res: Response) => {
   const supa = getServiceClient();
-  const { data, error } = await supa
+  const { data: profiles, error } = await supa
     .from('profiles')
-    .select('id, email, full_name, is_admin, created_at')
+    .select('id, email, full_name, phone, is_admin, created_at, updated_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  res.json(data ?? []);
+
+  const ids = (profiles ?? []).map((p) => (p as { id: string }).id);
+
+  // Per-user project counts in one round-trip.
+  const counts = new Map<string, number>();
+  if (ids.length > 0) {
+    const { data: projRows } = await supa
+      .from('projects')
+      .select('user_id')
+      .in('user_id', ids);
+    for (const r of projRows ?? []) {
+      const uid = (r as { user_id: string }).user_id;
+      counts.set(uid, (counts.get(uid) ?? 0) + 1);
+    }
+  }
+
+  // Per-user last sign-in timestamps from auth.users.
+  const lastSignIn = new Map<string, string | null>();
+  if (ids.length > 0) {
+    const { data: authRows } = await supa
+      .schema('auth')
+      .from('users')
+      .select('id, last_sign_in_at')
+      .in('id', ids);
+    for (const r of authRows ?? []) {
+      const row = r as { id: string; last_sign_in_at: string | null };
+      lastSignIn.set(row.id, row.last_sign_in_at);
+    }
+  }
+
+  const out = (profiles ?? []).map((p) => {
+    const row = p as Record<string, unknown> & { id: string };
+    return {
+      ...row,
+      project_count: counts.get(row.id) ?? 0,
+      last_sign_in_at: lastSignIn.get(row.id) ?? null,
+    };
+  });
+
+  res.json(out);
+});
+
+// Toggle admin flag. Admins can promote / demote other accounts.
+// Self-demotion is blocked to prevent locking the platform out of admins.
+adminRouter.patch('/users/:id/admin', async (req: Request, res: Response) => {
+  const { user } = req as AuthedRequest;
+  const targetId = req.params.id;
+  const isAdmin = Boolean((req.body as { is_admin?: boolean }).is_admin);
+
+  if (targetId === user.id && !isAdmin) {
+    res.status(400).json({ error: 'You cannot demote yourself.' });
+    return;
+  }
+
+  const supa = getServiceClient();
+  const { data, error } = await supa
+    .from('profiles')
+    .update({ is_admin: isAdmin })
+    .eq('id', targetId)
+    .select('id, email, is_admin')
+    .single();
+  if (error || !data) {
+    res.status(500).json({ error: error?.message ?? 'update failed' });
+    return;
+  }
+  res.json(data);
+});
+
+// Hard-delete a user. Cascades through public.profiles + auth.users + every
+// FK with on-delete cascade (projects, topic_queue, notification_reads, etc).
+adminRouter.delete('/users/:id', async (req: Request, res: Response) => {
+  const { user } = req as AuthedRequest;
+  const targetId = req.params.id;
+
+  if (targetId === user.id) {
+    res.status(400).json({ error: 'You cannot delete your own account here.' });
+    return;
+  }
+
+  const supa = getServiceClient();
+  // Block deletion of other admins as a safety net — they must be demoted
+  // first. Avoids "I clicked the wrong row" disasters.
+  const { data: target } = await supa
+    .from('profiles')
+    .select('is_admin, email')
+    .eq('id', targetId)
+    .single();
+  if ((target as { is_admin?: boolean } | null)?.is_admin) {
+    res.status(400).json({ error: 'Demote this admin before deleting.' });
+    return;
+  }
+
+  // Use the Supabase Auth admin API to remove the auth user. Cascades into
+  // public.profiles via the FK on profiles.id.
+  const { error } = await supa.auth.admin.deleteUser(targetId);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.status(204).end();
 });
