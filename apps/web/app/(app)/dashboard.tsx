@@ -42,7 +42,7 @@ function timeAgo(iso: string): string {
 const LANG = LANGUAGE_LABEL;
 const SOURCE: Record<string, string> = { urls: 'YouTube', script: 'Script', topic: 'Topic', research: 'Research' };
 
-const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/7vurtBLpnYr2skwMFZqAGX.apk';
+const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/oEqR6tQXdzUYWsWBFkwZPN.apk';
 
 function openAndroidApk() {
   if (Platform.OS === 'web') {
