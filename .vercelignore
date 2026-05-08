@@ -12,3 +12,14 @@ apps/api/dist
 
 # API server isn't deployed on Vercel
 apps/api
+
+# Web-shell project — only needed for EAS Android build, not the website
+apps/web-shell
+
+# Build artifacts — never upload to Vercel
+*.apk
+*.aab
+*.ipa
+*.app
+application-*.apk
+apps/web/dist

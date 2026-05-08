@@ -549,17 +549,24 @@ function ContactPill({
         backgroundColor: hover ? C.ink : C.paper,
         borderWidth: 1,
         borderColor: hover ? C.ink : C.hairline,
-        ...({ transition: 'all 180ms ease' } as any),
+        ...({ transition: 'background-color 180ms ease, border-color 180ms ease' } as any),
       }}
     >
-      <View style={{ opacity: hover ? 0 : 1, position: hover ? 'absolute' : 'relative', left: 14 }}>{icon}</View>
+      <View
+        style={{ opacity: hover ? 0.85 : 1, ...({ transition: 'opacity 180ms ease' } as any) }}
+      >
+        {hover ? (
+          <ArrowRight size={13} color={C.paper} strokeWidth={2.4} />
+        ) : (
+          icon
+        )}
+      </View>
       <Text
         style={{
           fontFamily: FONT.mono,
           fontSize: 12,
           color: hover ? C.paper : C.ink,
           fontWeight: '600',
-          paddingLeft: hover ? 0 : 0,
         }}
       >
         {label}
