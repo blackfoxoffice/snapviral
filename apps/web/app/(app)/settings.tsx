@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Pressable, useWindowDimensions, Image } from 'react-native';
 import { useEffect, useState } from 'react';
-import { LogOut, Upload, Trash2, Youtube, Instagram, Facebook, Twitter, Link2 } from 'lucide-react-native';
+import { LogOut, Upload, Trash2, Youtube, Instagram, Facebook, Twitter, Link2, RefreshCw, Palette, Check } from 'lucide-react-native';
+import { TextInput } from 'react-native';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -8,6 +9,7 @@ import { Tabs } from '../../components/ui/Tabs';
 import { toast } from '../../components/ui/Toast';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { useTheme, SIDEBAR_PRESETS, type SidebarPreset } from '../../lib/theme';
 import {
   useLogo, useUploadLogo, useDeleteLogo,
   useSocialHandles, useUpdateSocialHandles,
@@ -142,12 +144,15 @@ async function handlePasswordUpdate() {
           onChange={setTab}
           items={[
             { value: 'profile', label: 'Profile' },
+            { value: 'appearance', label: 'Appearance' },
             { value: 'branding', label: 'Branding' },
             { value: 'social', label: 'Social' },
             { value: 'account', label: 'Account' },
           ]}
           className="mb-5"
         />
+
+        {tab === 'appearance' ? <AppearancePanel /> : null}
 
         {tab === 'profile' ? (
           <Card>
@@ -308,5 +313,352 @@ async function handlePasswordUpdate() {
         ) : null}
       </View>
     </ScrollView>
+  );
+}
+
+// =====================================================================
+// Appearance — sidebar theme picker
+// =====================================================================
+function AppearancePanel() {
+  const { theme, sidebar, setSidebarPreset, setSidebarCustomColor, setAccent, resetTheme } = useTheme();
+  const [customHex, setCustomHex] = useState(theme.sidebarCustomColor);
+  const [accentHex, setAccentHex] = useState(theme.accent);
+
+  function handleCustomBlur() {
+    const v = customHex.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      setSidebarCustomColor(v);
+    } else {
+      setCustomHex(theme.sidebarCustomColor);
+    }
+  }
+
+  function handleAccentBlur() {
+    const v = accentHex.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      setAccent(v);
+    } else {
+      setAccentHex(theme.accent);
+    }
+  }
+
+  return (
+    <View className="gap-5">
+      {/* Preview */}
+      <Card>
+        <Card.Header>
+          <View className="flex-row items-center gap-2">
+            <Palette size={14} color="#78909C" />
+            <Text className="text-[14px] font-semibold text-ink">Sidebar theme</Text>
+          </View>
+          <Text className="text-[12px] text-ink-muted mt-0.5">
+            Pick a sidebar look. Changes apply immediately and stay across sessions.
+          </Text>
+        </Card.Header>
+        <Card.Body>
+          {/* Live preview frame */}
+          <View
+            className="rounded-xl overflow-hidden border border-surface-border mb-4"
+            style={{ height: 220 }}
+          >
+            <View style={{ flex: 1, flexDirection: 'row' }}>
+              <View
+                style={{
+                  width: 160,
+                  backgroundColor: sidebar.bg,
+                  borderRightWidth: sidebar.isDark ? 0 : 1,
+                  borderRightColor: sidebar.border,
+                  paddingHorizontal: 8,
+                  paddingTop: 14,
+                  gap: 6,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', paddingHorizontal: 8, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: sidebar.textActive }}>Snap</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: sidebar.brand, fontStyle: 'italic' }}>
+                    Viral
+                  </Text>
+                </View>
+                {[
+                  { l: 'Dashboard', active: true },
+                  { l: 'New Project', active: false },
+                  { l: 'Library', active: false },
+                  { l: 'Settings', active: false },
+                ].map((row, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      position: 'relative',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 6,
+                      backgroundColor: row.active ? sidebar.activeBg : 'transparent',
+                    }}
+                  >
+                    {row.active ? (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 6,
+                          bottom: 6,
+                          width: 2.5,
+                          borderRadius: 2,
+                          backgroundColor: sidebar.activeBar,
+                        }}
+                      />
+                    ) : null}
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 2,
+                        backgroundColor: row.active ? sidebar.activeBar : sidebar.textInactive,
+                        marginRight: 8,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: row.active ? sidebar.textActive : sidebar.textInactive,
+                        fontWeight: row.active ? '600' : '500',
+                      }}
+                    >
+                      {row.l}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <View style={{ flex: 1, backgroundColor: '#FAFAF7', padding: 14 }}>
+                <Text style={{ fontSize: 11, color: '#71717A', letterSpacing: 1, textTransform: 'uppercase', fontWeight: '700' }}>
+                  Live preview
+                </Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#0A0A0B', marginTop: 6, letterSpacing: -0.4 }}>
+                  Studio
+                </Text>
+                <Text style={{ fontSize: 11, color: '#52525B', marginTop: 4 }}>
+                  This is what your app shell will look like.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Preset grid */}
+          <View className="flex-row flex-wrap gap-2.5">
+            {SIDEBAR_PRESETS.map((p) => {
+              const active = theme.sidebarPreset === p.key;
+              return (
+                <Pressable
+                  key={p.key}
+                  onPress={() => setSidebarPreset(p.key)}
+                  style={{
+                    width: 84,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    borderWidth: 1.5,
+                    borderColor: active ? '#E11D2C' : 'rgba(15,23,42,0.10)',
+                    backgroundColor: '#FFFFFF',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 56,
+                      height: 36,
+                      borderRadius: 6,
+                      backgroundColor: p.swatch,
+                      borderWidth: p.isDark ? 0 : 1,
+                      borderColor: 'rgba(15,23,42,0.08)',
+                      position: 'relative',
+                    }}
+                  >
+                    {active ? (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          width: 14,
+                          height: 14,
+                          borderRadius: 7,
+                          backgroundColor: '#E11D2C',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Check size={9} color="#FFFFFF" strokeWidth={3} />
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: active ? '700' : '500',
+                      color: active ? '#E11D2C' : '#27272A',
+                    }}
+                  >
+                    {p.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card.Body>
+      </Card>
+
+      {/* Custom hex */}
+      <Card>
+        <Card.Header>
+          <Text className="text-[14px] font-semibold text-ink">Custom color</Text>
+          <Text className="text-[12px] text-ink-muted mt-0.5">
+            Type a hex code for full control. Contrast adapts automatically.
+          </Text>
+        </Card.Header>
+        <Card.Body>
+          <View className="flex-row items-end gap-3">
+            <View
+              style={{
+                width: 50,
+                height: 38,
+                borderRadius: 8,
+                backgroundColor: theme.sidebarCustomColor,
+                borderWidth: 1,
+                borderColor: 'rgba(15,23,42,0.10)',
+              }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider mb-1.5">
+                Sidebar background
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingHorizontal: 12,
+                  height: 38,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: 'rgba(15,23,42,0.10)',
+                  backgroundColor: '#FFFFFF',
+                }}
+              >
+                <Text style={{ fontFamily: 'monospace', fontSize: 12, color: '#71717A' }}>#</Text>
+                <TextInput
+                  value={customHex.replace(/^#/, '')}
+                  onChangeText={(v) => setCustomHex('#' + v.replace(/[^0-9a-fA-F]/g, '').slice(0, 6))}
+                  onBlur={handleCustomBlur}
+                  placeholder="0F1B2D"
+                  placeholderTextColor="#A1A1AA"
+                  autoCapitalize="characters"
+                  style={{
+                    flex: 1,
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    color: '#0A0A0B',
+                    ...({ outlineStyle: 'none' } as any),
+                  }}
+                />
+                <Pressable
+                  onPress={handleCustomBlur}
+                  style={{
+                    paddingHorizontal: 10,
+                    height: 26,
+                    borderRadius: 6,
+                    backgroundColor: '#0A0A0B',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: '#FFFFFF', fontWeight: '700' }}>Apply</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          <View className="flex-row items-end gap-3 mt-4">
+            <View
+              style={{
+                width: 50,
+                height: 38,
+                borderRadius: 8,
+                backgroundColor: theme.accent,
+                borderWidth: 1,
+                borderColor: 'rgba(15,23,42,0.10)',
+              }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text className="text-[11px] font-bold text-ink-subtle uppercase tracking-wider mb-1.5">
+                Brand accent
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingHorizontal: 12,
+                  height: 38,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: 'rgba(15,23,42,0.10)',
+                  backgroundColor: '#FFFFFF',
+                }}
+              >
+                <Text style={{ fontFamily: 'monospace', fontSize: 12, color: '#71717A' }}>#</Text>
+                <TextInput
+                  value={accentHex.replace(/^#/, '')}
+                  onChangeText={(v) => setAccentHex('#' + v.replace(/[^0-9a-fA-F]/g, '').slice(0, 6))}
+                  onBlur={handleAccentBlur}
+                  placeholder="E11D2C"
+                  placeholderTextColor="#A1A1AA"
+                  autoCapitalize="characters"
+                  style={{
+                    flex: 1,
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    color: '#0A0A0B',
+                    ...({ outlineStyle: 'none' } as any),
+                  }}
+                />
+                <Pressable
+                  onPress={handleAccentBlur}
+                  style={{
+                    paddingHorizontal: 10,
+                    height: 26,
+                    borderRadius: 6,
+                    backgroundColor: '#0A0A0B',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: '#FFFFFF', fontWeight: '700' }}>Apply</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          <View className="mt-5 pt-4 border-t border-surface-border flex-row items-center justify-between">
+            <Text className="text-[12px] text-ink-muted">
+              Stored on this device. Doesn't sync between browsers yet.
+            </Text>
+            <Pressable
+              onPress={() => {
+                resetTheme();
+                setCustomHex('#0F1B2D');
+                setAccentHex('#E11D2C');
+                toast.success('Theme reset to default');
+              }}
+              className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-md border border-surface-border"
+            >
+              <RefreshCw size={11} color="#52525B" />
+              <Text className="text-[11px] font-semibold text-ink-secondary">Reset</Text>
+            </Pressable>
+          </View>
+        </Card.Body>
+      </Card>
+    </View>
   );
 }

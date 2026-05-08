@@ -42,7 +42,17 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "f623fc30-5cbe-4109-9895-27d1e0a3496a"
       }
+    },
+    "owner": "blackfoxoffice",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f623fc30-5cbe-4109-9895-27d1e0a3496a"
     }
   }
 }

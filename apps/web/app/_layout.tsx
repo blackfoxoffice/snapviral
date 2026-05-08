@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../lib/auth';
+import { ThemeProvider } from '../lib/theme';
 import { ToastHost } from '../components/ui/Toast';
 
 export default function RootLayout() {
@@ -21,6 +22,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
         <AuthProvider>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAFAFA' } }}>
@@ -39,6 +41,7 @@ export default function RootLayout() {
           </Stack>
           <ToastHost />
         </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../lib/auth';
 import { SnapViralLogo } from '../icons/SnapViralLogo';
 import { useSidebarCollapsed } from '../../lib/sidebar';
+import { useTheme } from '../../lib/theme';
 
 interface NavItem {
   href: string;
@@ -49,12 +50,10 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const { collapsed, toggle } = useSidebarCollapsed();
+  const { sidebar } = useTheme();
 
   if (width < 768) return null;
 
-  // Admin navigation lives entirely in the (admin) group at /admin —
-  // it is intentionally NOT exposed from the user shell. Admins reach
-  // it via the dedicated /admin/login portal.
   const navItems: NavItem[] = NAV;
 
   const name =
@@ -65,26 +64,48 @@ export function Sidebar() {
 
   return (
     <View
-      className="h-screen bg-nav"
-      style={{ width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+      style={{
+        height: '100%',
+        width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
+        backgroundColor: sidebar.bg,
+        borderRightWidth: sidebar.isDark ? 0 : 1,
+        borderRightColor: sidebar.border,
+      }}
     >
       {/* Logo / wordmark */}
       <View
-        className="flex-row items-center px-4 pt-5 pb-6"
-        style={{ gap: collapsed ? 0 : 10 }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingTop: 20,
+          paddingBottom: 24,
+          gap: collapsed ? 0 : 10,
+        }}
       >
         <SnapViralLogo size={collapsed ? 32 : 30} />
         {!collapsed ? (
-          <View className="flex-row items-baseline">
+          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
             <Text
-              className="font-extrabold text-white"
-              style={{ fontSize: 16, letterSpacing: -0.5, lineHeight: 18 }}
+              style={{
+                fontSize: 16,
+                fontWeight: '800',
+                color: sidebar.textActive,
+                letterSpacing: -0.5,
+                lineHeight: 18,
+              }}
             >
               Snap
             </Text>
             <Text
-              className="font-extrabold"
-              style={{ fontSize: 16, letterSpacing: -0.5, lineHeight: 18, color: '#FF4D4F', fontStyle: 'italic' }}
+              style={{
+                fontSize: 16,
+                fontWeight: '800',
+                color: sidebar.brand,
+                letterSpacing: -0.5,
+                lineHeight: 18,
+                fontStyle: 'italic',
+              }}
             >
               Viral
             </Text>
@@ -93,7 +114,7 @@ export function Sidebar() {
       </View>
 
       {/* Nav items */}
-      <View className="flex-1 px-2 gap-0.5">
+      <View style={{ flex: 1, paddingHorizontal: 8, gap: 2 }}>
         {navItems.map((item) => {
           const active =
             pathname === item.href ||
@@ -104,21 +125,46 @@ export function Sidebar() {
               key={item.href}
               disabled={item.disabled}
               onPress={() => !item.disabled && router.push(item.href as any)}
-              className={`flex-row items-center rounded-lg ${
-                collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2.5'
-              } ${active ? 'bg-nav-surface' : ''} ${item.disabled ? 'opacity-30' : ''}`}
-              style={collapsed ? { height: 40 } : undefined}
+              style={{
+                position: 'relative',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: collapsed ? 0 : 10,
+                paddingHorizontal: collapsed ? 0 : 12,
+                paddingVertical: 10,
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                borderRadius: 8,
+                backgroundColor: active ? sidebar.activeBg : 'transparent',
+                opacity: item.disabled ? 0.3 : 1,
+                height: collapsed ? 40 : undefined,
+                ...({ transition: 'background 180ms ease' } as any),
+              }}
             >
+              {active ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: collapsed ? 4 : 0,
+                    top: 8,
+                    bottom: 8,
+                    width: 3,
+                    borderRadius: 2,
+                    backgroundColor: sidebar.activeBar,
+                  }}
+                />
+              ) : null}
               <Icon
                 size={collapsed ? 18 : 16}
-                color={active ? '#E53935' : '#78909C'}
-                strokeWidth={active ? 2 : 1.5}
+                color={active ? sidebar.activeBar : sidebar.textInactive}
+                strokeWidth={active ? 2 : 1.6}
               />
               {!collapsed ? (
                 <Text
-                  className={`text-[13px] ${
-                    active ? 'text-white font-semibold' : 'text-nav-muted'
-                  }`}
+                  style={{
+                    fontSize: 13,
+                    color: active ? sidebar.textActive : sidebar.textInactive,
+                    fontWeight: active ? '600' : '500',
+                  }}
                 >
                   {item.label}
                 </Text>
@@ -129,53 +175,79 @@ export function Sidebar() {
       </View>
 
       {/* Collapse toggle */}
-      <View className="px-2 mb-1">
+      <View style={{ paddingHorizontal: 8, marginBottom: 4 }}>
         <Pressable
           onPress={toggle}
-          className="flex-row items-center rounded-lg hover:bg-nav-surface py-2.5"
-          style={collapsed ? { justifyContent: 'center' } : { paddingHorizontal: 12, gap: 10 }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: 10,
+            paddingHorizontal: collapsed ? 0 : 12,
+            gap: 10,
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            borderRadius: 8,
+          }}
         >
           {collapsed ? (
-            <ChevronsRight size={16} color="#546E7A" />
+            <ChevronsRight size={16} color={sidebar.textMuted} />
           ) : (
             <>
-              <ChevronsLeft size={16} color="#546E7A" />
-              <Text className="text-[12px] text-ink-subtle">Collapse</Text>
+              <ChevronsLeft size={16} color={sidebar.textMuted} />
+              <Text style={{ fontSize: 12, color: sidebar.textMuted }}>Collapse</Text>
             </>
           )}
         </Pressable>
       </View>
 
       {/* Divider */}
-      <View className="border-t border-nav-border mx-2.5" />
+      <View style={{ height: 1, backgroundColor: sidebar.border, marginHorizontal: 10 }} />
 
       {/* User */}
-      <View className="px-2 py-3">
+      <View style={{ paddingHorizontal: 8, paddingVertical: 12 }}>
         <View
-          className="flex-row items-center"
-          style={
-            collapsed
-              ? { justifyContent: 'center' }
-              : { gap: 10, paddingHorizontal: 10 }
-          }
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: collapsed ? 0 : 10,
+            paddingHorizontal: collapsed ? 0 : 10,
+          }}
         >
-          <View className="h-8 w-8 items-center justify-center rounded-full bg-brand">
-            <Text className="text-[12px] font-bold text-white">
+          <View
+            style={{
+              height: 32,
+              width: 32,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 999,
+              backgroundColor: sidebar.brand,
+            }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
               {name.charAt(0).toUpperCase()}
             </Text>
           </View>
           {!collapsed ? (
             <>
-              <View className="flex-1 min-w-0">
-                <Text className="text-[12px] font-semibold text-white" numberOfLines={1}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{ fontSize: 12, fontWeight: '600', color: sidebar.textActive }}
+                  numberOfLines={1}
+                >
                   {name}
                 </Text>
-                <Text className="text-[11px] text-nav-muted" numberOfLines={1}>
+                <Text
+                  style={{ fontSize: 11, color: sidebar.textMuted }}
+                  numberOfLines={1}
+                >
                   {email}
                 </Text>
               </View>
-              <Pressable onPress={() => signOut()} className="p-1.5 rounded-lg hover:bg-nav-surface">
-                <LogOut size={14} color="#78909C" />
+              <Pressable
+                onPress={() => signOut()}
+                style={{ padding: 6, borderRadius: 8 }}
+              >
+                <LogOut size={14} color={sidebar.textMuted} />
               </Pressable>
             </>
           ) : null}
@@ -198,12 +270,17 @@ export function BottomTabs() {
   const pathname = usePathname();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { sidebar } = useTheme();
   if (width >= 768) return null;
 
   return (
     <View
-      className="flex-row items-stretch border-t border-surface-border bg-surface-sunken"
       style={{
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        borderTopWidth: 1,
+        borderTopColor: sidebar.border,
+        backgroundColor: sidebar.bg,
         position: 'sticky' as any,
         bottom: 0,
         left: 0,
@@ -222,8 +299,13 @@ export function BottomTabs() {
           <Pressable
             key={item.href}
             onPress={() => router.push(item.href as any)}
-            className="flex-1 items-center justify-center py-2"
-            style={{ minHeight: 56 }}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 8,
+              minHeight: 56,
+            }}
           >
             {accentNew ? (
               <View
@@ -231,7 +313,7 @@ export function BottomTabs() {
                   width: 36,
                   height: 36,
                   borderRadius: 12,
-                  backgroundColor: '#E53935',
+                  backgroundColor: sidebar.brand,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: 2,
@@ -242,14 +324,21 @@ export function BottomTabs() {
             ) : (
               <Icon
                 size={20}
-                color={active ? '#E53935' : '#78909C'}
+                color={active ? sidebar.activeBar : sidebar.textInactive}
                 strokeWidth={active ? 2 : 1.6}
               />
             )}
             <Text
-              className={`text-[10px] mt-0.5 ${
-                active ? 'text-brand font-semibold' : accentNew ? 'text-ink' : 'text-ink-muted'
-              }`}
+              style={{
+                fontSize: 10,
+                marginTop: 2,
+                color: active
+                  ? sidebar.activeBar
+                  : accentNew
+                    ? sidebar.textActive
+                    : sidebar.textMuted,
+                fontWeight: active ? '600' : '500',
+              }}
             >
               {item.label}
             </Text>
