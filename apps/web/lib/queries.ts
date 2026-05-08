@@ -484,6 +484,12 @@ export function useDeleteBlogPost() {
   });
 }
 
+export function useUploadBlogImage() {
+  return useMutation({
+    mutationFn: (args: { dataUrl: string; filename?: string }) => api.uploadBlogImage(args),
+  });
+}
+
 // ===== Notifications =====
 
 const qkNotif = {

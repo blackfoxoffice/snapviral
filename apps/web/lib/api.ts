@@ -540,6 +540,18 @@ export const api = {
     await parseResponse(res);
   },
 
+  async uploadBlogImage(args: {
+    dataUrl: string;
+    filename?: string;
+  }): Promise<{ url: string; path: string; size: number; mime: string }> {
+    const res = await fetch(`${BASE_URL}/api/blog/admin/upload-image`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ image: args.dataUrl, filename: args.filename ?? null }),
+    });
+    return parseResponse(res);
+  },
+
   // ===== Notifications (user) =====
 
   async listNotifications(): Promise<{ notifications: AppNotification[]; unread: number }> {

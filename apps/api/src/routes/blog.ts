@@ -123,7 +123,37 @@ function slugify(s: string): string {
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 200);
+    .slice(0, 200) || 'untitled';
+}
+
+// Resolve a slug to one that's NOT already in use. If `slug` is taken,
+// returns `slug-2`, `slug-3`, etc. (skipping ignoreId so we don't clash
+// with our own row on update).
+async function uniqueSlug(
+  supa: ReturnType<typeof getServiceClient>,
+  base: string,
+  ignoreId?: string,
+): Promise<string> {
+  const candidate = base;
+  // Pull every existing slug that starts with `base`. Cheap because we have
+  // a unique index on slug already.
+  let q = supa
+    .from('blog_posts')
+    .select('id, slug')
+    .ilike('slug', `${base}%`);
+  const { data } = await q;
+  const taken = new Set(
+    (data ?? [])
+      .filter((r) => !ignoreId || (r as { id: string }).id !== ignoreId)
+      .map((r) => (r as { slug: string }).slug),
+  );
+  if (!taken.has(candidate)) return candidate;
+  for (let i = 2; i < 10_000; i++) {
+    const next = `${base}-${i}`;
+    if (!taken.has(next)) return next;
+  }
+  // Fallback: append a short random suffix if 10k collisions ever happen.
+  return `${base}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 blogRouter.post('/admin/posts', async (req: Request, res: Response) => {
@@ -135,7 +165,8 @@ blogRouter.post('/admin/posts', async (req: Request, res: Response) => {
   }
 
   const supa = getServiceClient();
-  const slug = (body.slug && body.slug.trim()) || slugify(body.title);
+  const desired = (body.slug && body.slug.trim()) || slugify(body.title);
+  const slug = await uniqueSlug(supa, desired);
   const status = body.status === 'published' ? 'published' : 'draft';
 
   const { data, error } = await supa
@@ -156,8 +187,27 @@ blogRouter.post('/admin/posts', async (req: Request, res: Response) => {
     .single();
 
   if (error) {
+    // Race conditions are still possible; one retry with a fresh suffix.
     if (error.code === '23505') {
-      res.status(409).json({ error: 'slug_taken', message: 'A post with that slug already exists.' });
+      const retrySlug = await uniqueSlug(supa, desired);
+      const { data: retryData, error: retryError } = await supa
+        .from('blog_posts')
+        .insert({
+          slug: retrySlug,
+          title: body.title,
+          excerpt: body.excerpt ?? null,
+          content_md: body.content_md,
+          cover_image_url: body.cover_image_url ?? null,
+          status,
+          tags: body.tags ?? [],
+          author_id: user.id,
+          read_minutes: readMinutes(body.content_md),
+          published_at: status === 'published' ? new Date().toISOString() : null,
+        })
+        .select()
+        .single();
+      if (retryError) throw retryError;
+      res.json(retryData);
       return;
     }
     throw error;
@@ -182,7 +232,11 @@ blogRouter.patch('/admin/posts/:id', async (req: Request, res: Response) => {
   }
 
   const update: Record<string, unknown> = {};
-  if (body.slug !== undefined) update.slug = body.slug;
+  if (body.slug !== undefined) {
+    // Auto-resolve collision if the new slug clashes with another row.
+    const wanted = body.slug.trim() ? slugify(body.slug) : slugify(body.title ?? 'untitled');
+    update.slug = await uniqueSlug(supa, wanted, id);
+  }
   if (body.title !== undefined) update.title = body.title;
   if (body.excerpt !== undefined) update.excerpt = body.excerpt;
   if (body.content_md !== undefined) {
@@ -224,4 +278,57 @@ blogRouter.delete('/admin/posts/:id', async (req: Request, res: Response) => {
   const { error } = await supa.from('blog_posts').delete().eq('id', req.params.id);
   if (error) throw error;
   res.status(204).end();
+});
+
+// =====================================================================
+// Image upload — accepts a base64 data URL, drops it into the public
+// blog-assets bucket, returns a public URL ready to slot into the post.
+// =====================================================================
+blogRouter.post('/admin/upload-image', async (req: Request, res: Response) => {
+  const body = req.body as { image?: string; filename?: string };
+
+  if (!body.image || typeof body.image !== 'string') {
+    res.status(400).json({ error: 'image (base64 data URL) is required' });
+    return;
+  }
+
+  const match = body.image.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+  if (!match) {
+    res.status(400).json({ error: 'Invalid image data URL — png / jpeg / webp / gif only' });
+    return;
+  }
+
+  const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+  const mime = `image/${match[1]}`;
+  const buf = Buffer.from(match[2]!, 'base64');
+
+  if (buf.length > 10 * 1024 * 1024) {
+    res.status(400).json({ error: 'Image must be under 10 MB' });
+    return;
+  }
+
+  // Storage path: blog/<yyyy-mm>/<random>.<ext>
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const rand = Math.random().toString(36).slice(2, 10);
+  const safeName = (body.filename ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  const baseName = safeName ? `${safeName}-${rand}` : rand;
+  const storagePath = `blog/${year}-${month}/${baseName}.${ext}`;
+
+  const supa = getServiceClient();
+  const { error: upErr } = await supa.storage
+    .from('blog-assets')
+    .upload(storagePath, buf, { contentType: mime, upsert: false });
+  if (upErr) {
+    res.status(500).json({ error: `Upload failed: ${upErr.message}` });
+    return;
+  }
+
+  const { data: pub } = supa.storage.from('blog-assets').getPublicUrl(storagePath);
+  res.json({ url: pub.publicUrl, path: storagePath, size: buf.length, mime });
 });
