@@ -239,3 +239,26 @@ export interface ProjectWithRelations extends Project {
   jobs: PipelineJob[];
   assets: Asset[];
 }
+
+// =====================================================================
+// Notifications — admin-broadcast in-app announcements
+// =====================================================================
+export type NotificationKind = 'announcement' | 'marketing' | 'promo' | 'update' | 'maintenance';
+export type NotificationAudience = 'all' | 'free' | 'paid' | 'admins';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  kind: NotificationKind;
+  audience: NotificationAudience;
+  cta_label: string | null;
+  cta_url: string | null;
+  icon: string | null;
+  accent: string | null;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+  read?: boolean;
+  read_count?: number;
+}

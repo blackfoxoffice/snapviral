@@ -2,15 +2,22 @@ import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
 import {
   Users as UsersIcon,
   FileVideo,
-  CheckCircle,
+  CheckCircle2,
   Youtube,
   Calendar,
   AlertTriangle,
-  Loader,
+  Activity,
   Clock,
+  TrendingUp,
 } from 'lucide-react-native';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { useAdminOverview } from '../../../lib/queries';
+
+const FONT = {
+  sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif',
+  serif: 'Newsreader, Georgia, "Times New Roman", serif',
+  mono: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+};
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -26,39 +33,167 @@ export default function AdminOverview() {
   const isMobile = width < 768;
 
   return (
-    <ScrollView className="flex-1">
+    <ScrollView className="flex-1" style={{ backgroundColor: '#FAFAF7' }}>
       <View
-        className="mx-auto w-full max-w-[1100px]"
-        style={{ paddingHorizontal: isMobile ? 16 : 32, paddingTop: 24, paddingBottom: 80 }}
+        className="mx-auto w-full"
+        style={{
+          maxWidth: 1200,
+          paddingHorizontal: isMobile ? 16 : 32,
+          paddingTop: 28,
+          paddingBottom: 80,
+        }}
       >
-        <Text className="text-[24px] font-bold text-ink mb-1" style={{ letterSpacing: -0.5 }}>
-          System overview
-        </Text>
-        <Text className="text-[13px] text-ink-muted mb-6">
-          Live snapshot of users, projects, and pipeline health.
-        </Text>
+        {/* Editorial header */}
+        <View style={{ marginBottom: 32 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#16A34A' }} />
+            <Text
+              style={{
+                fontFamily: FONT.mono,
+                fontSize: 11,
+                fontWeight: '700',
+                color: '#16A34A',
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+              }}
+            >
+              Live · refreshing every 30s
+            </Text>
+          </View>
+          <Text
+            style={{
+              fontFamily: FONT.sans,
+              fontSize: isMobile ? 26 : 34,
+              fontWeight: '700',
+              color: '#0A0A0B',
+              letterSpacing: -1.2,
+              marginBottom: 6,
+            }}
+          >
+            System overview
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONT.sans,
+              fontSize: 14,
+              color: '#52525B',
+              maxWidth: 640,
+              lineHeight: 22,
+            }}
+          >
+            A live snapshot of every signal that matters: who's signing up, what's queued in the
+            pipeline, what shipped, and what's on fire.
+          </Text>
+        </View>
 
         {isLoading ? (
-          <View className="flex-row flex-wrap gap-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} style={{ flexBasis: '47%', flexGrow: 1, minWidth: 160 }}>
-                <Skeleton className="h-[88px] rounded-xl" />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <View key={i} style={{ flexBasis: isMobile ? '47%' : '23%', flexGrow: 1, minWidth: 160 }}>
+                <Skeleton className="h-[120px] rounded-xl" />
               </View>
             ))}
           </View>
         ) : data ? (
-          <View className="flex-row flex-wrap gap-3">
-            <Tile icon={<UsersIcon size={14} color="#42A5F5" />} label="Users" value={data.user_count} accent="#42A5F5" />
-            <Tile icon={<FileVideo size={14} color="#78909C" />} label="Projects" value={data.project_count} accent="#78909C" />
-            <Tile icon={<CheckCircle size={14} color="#00E676" />} label="Ready" value={data.ready_videos} accent="#00E676" />
-            <Tile icon={<Youtube size={14} color="#E53935" />} label="Published" value={data.published_videos} accent="#E53935" />
-            <Tile icon={<Calendar size={14} color="#FFB300" />} label="Scheduled" value={data.scheduled_videos} accent="#FFB300" />
-            <Tile icon={<AlertTriangle size={14} color="#EF5350" />} label="Failed" value={data.failed_videos} accent="#EF5350" />
-            <Tile icon={<Loader size={14} color="#42A5F5" />} label="Active jobs" value={data.active_jobs} accent="#42A5F5" />
-            <Tile icon={<Clock size={14} color="#78909C" />} label="Total content" value={formatDuration(data.total_storage_seconds)} accent="#78909C" />
-          </View>
+          <>
+            {/* Hero metrics */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+              <Tile
+                Icon={UsersIcon}
+                label="Users"
+                value={data.user_count}
+                accent="#0F172A"
+                isMobile={isMobile}
+                wide
+              />
+              <Tile
+                Icon={FileVideo}
+                label="Projects"
+                value={data.project_count}
+                accent="#52525B"
+                isMobile={isMobile}
+                wide
+              />
+              <Tile
+                Icon={Activity}
+                label="Active jobs"
+                value={data.active_jobs}
+                accent="#E11D2C"
+                isMobile={isMobile}
+                wide
+                pulse
+              />
+              <Tile
+                Icon={Clock}
+                label="Total content"
+                value={formatDuration(data.total_storage_seconds)}
+                accent="#7C3AED"
+                isMobile={isMobile}
+                wide
+              />
+            </View>
+
+            {/* Pipeline health row */}
+            <Text
+              style={{
+                fontFamily: FONT.mono,
+                fontSize: 11,
+                fontWeight: '700',
+                color: '#71717A',
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+                marginBottom: 12,
+              }}
+            >
+              Pipeline health
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              <Tile
+                Icon={CheckCircle2}
+                label="Ready"
+                value={data.ready_videos}
+                accent="#16A34A"
+                isMobile={isMobile}
+              />
+              <Tile
+                Icon={Youtube}
+                label="Published"
+                value={data.published_videos}
+                accent="#E11D2C"
+                isMobile={isMobile}
+              />
+              <Tile
+                Icon={Calendar}
+                label="Scheduled"
+                value={data.scheduled_videos}
+                accent="#F59E0B"
+                isMobile={isMobile}
+              />
+              <Tile
+                Icon={AlertTriangle}
+                label="Failed"
+                value={data.failed_videos}
+                accent="#DC2626"
+                isMobile={isMobile}
+              />
+            </View>
+          </>
         ) : (
-          <Text className="text-[13px] text-ink-muted">No data available.</Text>
+          <View
+            style={{
+              padding: 60,
+              alignItems: 'center',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: 'rgba(10,10,11,0.08)',
+              borderStyle: 'dashed',
+            }}
+          >
+            <Text style={{ fontFamily: FONT.sans, fontSize: 14, color: '#71717A' }}>
+              No data available.
+            </Text>
+          </View>
         )}
       </View>
     </ScrollView>
@@ -66,36 +201,85 @@ export default function AdminOverview() {
 }
 
 function Tile({
-  icon,
+  Icon,
   label,
   value,
   accent,
+  isMobile,
+  wide,
+  pulse,
 }: {
-  icon: React.ReactNode;
+  Icon: any;
   label: string;
   value: string | number;
   accent: string;
+  isMobile: boolean;
+  wide?: boolean;
+  pulse?: boolean;
 }) {
   return (
     <View
-      className="rounded-xl border bg-surface-card p-4"
-      style={{ flexBasis: '47%', flexGrow: 1, minWidth: 160, borderColor: '#E4E4E7' }}
+      style={{
+        flexBasis: isMobile ? '47%' : wide ? '23%' : '23%',
+        flexGrow: 1,
+        minWidth: isMobile ? 140 : 200,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(10,10,11,0.08)',
+        padding: 18,
+        ...({ boxShadow: '0 1px 0 rgba(10,10,11,0.04)' } as any),
+      }}
     >
-      <View className="flex-row items-center gap-2 mb-2">
-        {icon}
-        <Text className="text-[10px] font-bold uppercase tracking-widest text-ink-subtle">
-          {label}
-        </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 9,
+            backgroundColor: `${accent}14`,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon size={14} color={accent} strokeWidth={2.2} />
+        </View>
+        {pulse ? (
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: accent,
+            }}
+          />
+        ) : null}
       </View>
       <Text
-        className="text-[24px] font-bold text-ink"
-        style={{ fontVariant: ['tabular-nums'], letterSpacing: -0.5 }}
+        style={{
+          fontFamily: FONT.sans,
+          fontSize: 28,
+          fontWeight: '700',
+          color: '#0A0A0B',
+          letterSpacing: -0.8,
+          fontVariant: ['tabular-nums'] as any,
+          marginBottom: 4,
+        }}
       >
         {value}
       </Text>
-      <View className="mt-2 h-[3px] rounded-full bg-surface-raised overflow-hidden">
-        <View style={{ width: '100%', height: 3, backgroundColor: accent, opacity: 0.4 }} />
-      </View>
+      <Text
+        style={{
+          fontFamily: FONT.mono,
+          fontSize: 10,
+          fontWeight: '700',
+          color: '#71717A',
+          letterSpacing: 1.2,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </Text>
     </View>
   );
 }

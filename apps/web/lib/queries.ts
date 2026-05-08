@@ -459,3 +459,93 @@ export function useDeleteBlogPost() {
     },
   });
 }
+
+// ===== Notifications =====
+
+const qkNotif = {
+  inbox: ['notifications', 'inbox'] as const,
+  admin: ['notifications', 'admin'] as const,
+};
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: qkNotif.inbox,
+    queryFn: api.listNotifications,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.markNotificationRead(id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qkNotif.inbox });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.markAllNotificationsRead(),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qkNotif.inbox });
+    },
+  });
+}
+
+export function useAdminNotifications() {
+  return useQuery({
+    queryKey: qkNotif.admin,
+    queryFn: api.listAdminNotifications,
+  });
+}
+
+export function useCreateAdminNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.createAdminNotification,
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qkNotif.admin });
+      qc.invalidateQueries({ queryKey: qkNotif.inbox });
+    },
+  });
+}
+
+export function useUpdateAdminNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string } & Parameters<typeof api.updateAdminNotification>[1]) => {
+      const { id, ...rest } = args;
+      return api.updateAdminNotification(id, rest);
+    },
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qkNotif.admin });
+      qc.invalidateQueries({ queryKey: qkNotif.inbox });
+    },
+  });
+}
+
+export function useSendAdminNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.sendAdminNotification(id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qkNotif.admin });
+      qc.invalidateQueries({ queryKey: qkNotif.inbox });
+    },
+  });
+}
+
+export function useDeleteAdminNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteAdminNotification(id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qkNotif.admin });
+      qc.invalidateQueries({ queryKey: qkNotif.inbox });
+    },
+  });
+}

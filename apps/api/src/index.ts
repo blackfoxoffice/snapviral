@@ -13,6 +13,7 @@ import { adminRouter } from './routes/admin.js';
 import { billingRouter } from './routes/billing.js';
 import { automationRouter } from './routes/automation.js';
 import { blogRouter } from './routes/blog.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { errorHandler } from './middleware/error.js';
 import { startScheduler } from './services/scheduler.js';
 
@@ -48,6 +49,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/billing', billingRouter);
 app.use('/api/automation', automationRouter);
 app.use('/api/blog', blogRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.use(errorHandler);
 

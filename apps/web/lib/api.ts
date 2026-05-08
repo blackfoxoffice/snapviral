@@ -2,11 +2,14 @@ import { supabase } from './supabase';
 import type {
   AdminOverview,
   AdminSecret,
+  AppNotification,
   AutomationSettings,
   AutomationStatus,
   BillingMe,
   BlogPost,
   Currency,
+  NotificationAudience,
+  NotificationKind,
   Plan,
   PlanDef,
   Project,
@@ -502,6 +505,98 @@ export const api = {
 
   async deleteBlogPost(id: string): Promise<void> {
     const res = await fetch(`${BASE_URL}/api/blog/admin/posts/${id}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
+  },
+
+  // ===== Notifications (user) =====
+
+  async listNotifications(): Promise<{ notifications: AppNotification[]; unread: number }> {
+    const res = await fetch(`${BASE_URL}/api/notifications`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/notifications/${id}/read`, {
+      method: 'POST',
+      headers: await authHeaders(),
+    });
+    await parseResponse(res);
+  },
+
+  async markAllNotificationsRead(): Promise<{ marked: number }> {
+    const res = await fetch(`${BASE_URL}/api/notifications/mark-all-read`, {
+      method: 'POST',
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
+  // ===== Notifications (admin) =====
+
+  async listAdminNotifications(): Promise<{ notifications: AppNotification[] }> {
+    const res = await fetch(`${BASE_URL}/api/notifications/admin`, {
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
+  async createAdminNotification(args: {
+    title: string;
+    body: string;
+    kind?: NotificationKind;
+    audience?: NotificationAudience;
+    cta_label?: string | null;
+    cta_url?: string | null;
+    icon?: string | null;
+    accent?: string | null;
+    scheduled_at?: string | null;
+    send_now?: boolean;
+  }): Promise<AppNotification> {
+    const res = await fetch(`${BASE_URL}/api/notifications/admin`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse(res);
+  },
+
+  async updateAdminNotification(
+    id: string,
+    args: Partial<{
+      title: string;
+      body: string;
+      kind: NotificationKind;
+      audience: NotificationAudience;
+      cta_label: string | null;
+      cta_url: string | null;
+      icon: string | null;
+      accent: string | null;
+      scheduled_at: string | null;
+    }>,
+  ): Promise<AppNotification> {
+    const res = await fetch(`${BASE_URL}/api/notifications/admin/${id}`, {
+      method: 'PATCH',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse(res);
+  },
+
+  async sendAdminNotification(id: string): Promise<AppNotification> {
+    const res = await fetch(`${BASE_URL}/api/notifications/admin/${id}/send`, {
+      method: 'POST',
+      headers: await authHeaders(),
+    });
+    return parseResponse(res);
+  },
+
+  async deleteAdminNotification(id: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/api/notifications/admin/${id}`, {
       method: 'DELETE',
       headers: await authHeaders(),
     });

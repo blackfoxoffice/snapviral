@@ -4,6 +4,7 @@ import { Input } from './ui/Input';
 import { useAuth } from '../lib/auth';
 import { useSidebarCollapsed } from '../lib/sidebar';
 import { SnapViralLogo } from './icons/SnapViralLogo';
+import { NotificationBell } from './NotificationBell';
 
 export function TopBar() {
   const { user } = useAuth();
@@ -35,7 +36,8 @@ export function TopBar() {
           />
         </View>
       )}
-      <View className="flex-row items-center gap-3">
+      <View className="flex-row items-center gap-2">
+        <NotificationBell />
         <View className="h-7 w-7 items-center justify-center rounded-full bg-brand">
           <Text className="text-[11px] font-bold text-white">
             {name.charAt(0).toUpperCase()}
