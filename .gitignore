@@ -32,3 +32,13 @@ Thumbs.db
 tmp/
 apps/api/tmp/
 .vercel
+
+# build artifacts — never commit (host on EAS / Supabase / cloud storage)
+*.apk
+*.aab
+*.ipa
+*.app
+application-*.apk
+
+# claude code runtime
+.claude/scheduled_tasks.lock
