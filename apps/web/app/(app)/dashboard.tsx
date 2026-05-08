@@ -42,13 +42,13 @@ function timeAgo(iso: string): string {
 const LANG = LANGUAGE_LABEL;
 const SOURCE: Record<string, string> = { urls: 'YouTube', script: 'Script', topic: 'Topic', research: 'Research' };
 
-const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/oEqR6tQXdzUYWsWBFkwZPN.apk';
+const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/8o2Ux85qjzGQxVmRLzPLtt.apk';
 
 function openAndroidApk() {
   if (Platform.OS === 'web') {
     const a = document.createElement('a');
     a.href = ANDROID_APK_URL;
-    a.download = 'snapviral.apk';
+    a.download = 'snapviral-pwa.apk';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
     a.click();
@@ -464,7 +464,7 @@ function DownloadAppCard() {
             Get the SnapViral app
           </Text>
           <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
-            Android APK · 92 MB
+            Android APK · 61 MB · PWA build
           </Text>
         </View>
         <Download size={16} color="#FFFFFF" />
