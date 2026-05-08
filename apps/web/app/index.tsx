@@ -179,6 +179,7 @@ function Nav({ ctx }: { ctx: Ctx }) {
             <NavLink label="Features" />
             <NavLink label="Pricing" />
             <NavLink label="Blog" onPress={() => router.push('/blog' as any)} />
+            <NavLink label="About" onPress={() => router.push('/about' as any)} />
           </View>
         ) : null}
 
@@ -2066,9 +2067,9 @@ function Footer({ ctx }: { ctx: Ctx }) {
     {
       label: 'Company',
       links: [
-        ['About', '/'],
-        ['Careers', '/'],
-        ['Press', '/'],
+        ['About', '/about'],
+        ['Careers', '/about'],
+        ['Press', '/about'],
       ],
     },
     {
