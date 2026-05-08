@@ -335,9 +335,13 @@ export async function registerWebhookIfMissing(args: {
     metadata: {},
     filter_types: wantedEvents,
   });
-  return {
-    webhookId: (wh as { id: string }).id,
-    secret: (wh as { secret: string }).secret,
-    created: true,
-  };
+  const newId = (wh as { id: string }).id;
+  // Some Dodo SDK versions return the secret on create; others require a
+  // separate retrieve. Fall back to retrieve if it's missing.
+  let secret = (wh as { secret?: string }).secret;
+  if (!secret) {
+    const sec = await client.webhooks.retrieveSecret(newId);
+    secret = (sec as unknown as { secret: string }).secret;
+  }
+  return { webhookId: newId, secret, created: true };
 }
