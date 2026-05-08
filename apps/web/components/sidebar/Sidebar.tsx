@@ -11,14 +11,12 @@ import {
   LogOut,
   ChevronsLeft,
   ChevronsRight,
-  Shield,
   Youtube,
   CreditCard,
   Zap,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
-import { useIsAdmin } from '../../lib/admin';
 import { SnapViralLogo } from '../icons/SnapViralLogo';
 import { useSidebarCollapsed } from '../../lib/sidebar';
 
@@ -51,13 +49,13 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const { collapsed, toggle } = useSidebarCollapsed();
-  const isAdmin = useIsAdmin();
 
   if (width < 768) return null;
 
-  const navItems: NavItem[] = isAdmin
-    ? [...NAV.slice(0, NAV.length - 1), { href: '/admin', label: 'Admin', Icon: Shield }, NAV[NAV.length - 1]!]
-    : NAV;
+  // Admin navigation lives entirely in the (admin) group at /admin —
+  // it is intentionally NOT exposed from the user shell. Admins reach
+  // it via the dedicated /admin/login portal.
+  const navItems: NavItem[] = NAV;
 
   const name =
     (user?.user_metadata?.full_name as string | undefined) ??
