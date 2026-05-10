@@ -136,6 +136,14 @@ export default function NewProject() {
           {current === 0 ? (
             <Card>
               <Card.Body className="gap-4">
+                <Select
+                  label="Output language"
+                  helper="AI suggestions, headlines and the final script all use this language."
+                  value={language}
+                  onChange={(v) => setLanguage(v as ProjectLanguage)}
+                  options={LANG_SELECT_OPTIONS}
+                />
+
                 <View>
                   <Text className="text-[12px] font-semibold text-ink-secondary mb-2 uppercase tracking-wide">Choose your source</Text>
                   <Tabs

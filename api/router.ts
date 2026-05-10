@@ -11,6 +11,10 @@ import {
   type VercelResponse,
 } from './_lib.js';
 
+// Allow up to 60s — needed for the Sonar Pro Search path (live web research).
+// Hobby plan's hard cap. Fast paths (gpt-4o-mini) return in 2-5s.
+export const config = { maxDuration: 60 };
+
 // =====================================================================
 // Helpers
 // =====================================================================
@@ -1082,10 +1086,18 @@ Rules:
 - No duplicates. No numbering. No quotes inside the strings.
 - Output ONLY the JSON object. No preamble, no markdown.`;
 
+  // Live-search-only categories use Perplexity Sonar; everything else uses
+  // a fast non-search model so the round-trip fits the Hobby 60s function
+  // limit. Sonar Pro Search regularly hits 30-60s on cold prompts, which
+  // browsers/Vercel were aborting as "HTTP request cancelled".
+  const fastModel = 'openai/gpt-4o-mini';
+  const liveModel = 'perplexity/sonar-pro-search';
+
   try {
     const content = await callOpenRouter(req, {
       systemPrompt,
       userPrompt: niche ? `${spec.userPrompt} (focus: ${niche})` : spec.userPrompt,
+      model: spec.isLive ? liveModel : fastModel,
       jsonSchema: {
         type: 'object',
         properties: { topics: { type: 'array', items: { type: 'string' } } },
@@ -1136,7 +1148,7 @@ async function aiWriteRoute(req: VercelRequest, res: VercelResponse) {
     const content = await callOpenRouter(req, {
       systemPrompt,
       userPrompt: `Topic: ${topic}`,
-      model: 'perplexity/sonar-pro-search',
+      model: 'openai/gpt-4o-mini',
       temperature: 0.6,
     });
     const cleaned = content.replace(/^["']|["']$/g, '').trim();
