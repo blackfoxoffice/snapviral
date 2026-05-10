@@ -117,6 +117,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (path === '/automation/ai-write' && method === 'POST')
       return await aiWriteRoute(req, res);
 
+    // ---- Admin secrets (vault-backed) ----
+    if (path === '/admin/secrets' && method === 'GET') return await listAdminSecretsRoute(req, res);
+    if (path === '/admin/secrets' && method === 'POST') return await createAdminSecretRoute(req, res);
+    if (
+      path.startsWith('/admin/secrets/') &&
+      segments[3] === 'rotate' &&
+      method === 'POST'
+    ) {
+      return await rotateAdminSecretRoute(req, res, decodeURIComponent(segments[2] ?? ''));
+    }
+    if (path.startsWith('/admin/secrets/') && segments.length === 3 && method === 'DELETE') {
+      return await deleteAdminSecretRoute(req, res, decodeURIComponent(segments[2] ?? ''));
+    }
+
     // ---- Blog (admin) ----
     if (path === '/blog/admin/posts' && method === 'GET') return await listAdminPosts(req, res);
     if (path === '/blog/admin/posts' && method === 'POST') return await createBlogPost(req, res);
@@ -976,15 +990,26 @@ async function getTopicCategories(_req: VercelRequest, res: VercelResponse) {
   res.status(200).json({ categories });
 }
 
-async function callOpenRouter(args: {
-  systemPrompt: string;
-  userPrompt: string;
-  jsonSchema?: Record<string, unknown>;
-  model?: string;
-  temperature?: number;
-}): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+/**
+ * All OpenRouter calls run through the `ai_call_openrouter(jsonb)` SECURITY
+ * DEFINER RPC. The OpenRouter API key lives encrypted in Supabase Vault
+ * (referenced by public.app_secrets WHERE key_name='OPENROUTER_API_KEY').
+ * The key never leaves Postgres — we send it the request body, it makes the
+ * outbound HTTP call, and returns the decoded JSON response.
+ */
+async function callOpenRouter(
+  reqExpress: VercelRequest,
+  args: {
+    systemPrompt: string;
+    userPrompt: string;
+    jsonSchema?: Record<string, unknown>;
+    model?: string;
+    temperature?: number;
+  },
+): Promise<string> {
+  const r = await requireUser(reqExpress);
+  if ('error' in r) throw new Error(r.error.message);
+  const { supa } = r;
 
   const body: Record<string, unknown> = {
     model: args.model ?? 'perplexity/sonar-pro-search',
@@ -1001,23 +1026,18 @@ async function callOpenRouter(args: {
     };
   }
 
-  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.OPENROUTER_REFERER ?? 'https://app.snapviral.in',
-      'X-Title': process.env.OPENROUTER_TITLE ?? 'SnapViral',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!r.ok) {
-    const errText = await r.text();
-    throw new Error(`openrouter call failed: ${r.status} ${errText.slice(0, 300)}`);
+  const { data, error } = await supa.rpc('ai_call_openrouter', { p_body: body });
+  if (error) {
+    if (error.message?.includes('openrouter_key_not_set')) {
+      throw new Error(
+        'openrouter_key_not_set: ask an admin to set OPENROUTER_API_KEY at /admin/secrets',
+      );
+    }
+    throw new Error(error.message ?? 'openrouter rpc failed');
   }
-  const json = (await r.json()) as { choices: { message: { content: string } }[] };
-  const content = json.choices[0]?.message.content?.trim();
+
+  const json = data as { choices?: { message?: { content?: string } }[] };
+  const content = json?.choices?.[0]?.message?.content?.trim();
   if (!content) throw new Error('openrouter returned empty content');
   return content;
 }
@@ -1063,7 +1083,7 @@ Rules:
 - Output ONLY the JSON object. No preamble, no markdown.`;
 
   try {
-    const content = await callOpenRouter({
+    const content = await callOpenRouter(req, {
       systemPrompt,
       userPrompt: niche ? `${spec.userPrompt} (focus: ${niche})` : spec.userPrompt,
       jsonSchema: {
@@ -1113,7 +1133,7 @@ async function aiWriteRoute(req: VercelRequest, res: VercelResponse) {
       : `You are a senior video editor. Given a video topic, write a single short paragraph (40-80 words) of EXTRA CONTEXT — the specific facts, angles, names, numbers, or perspectives the AI scriptwriter should weave into the script. Concrete and useful, not generic. Plain English. No bullet points. Output the paragraph ONLY — no preamble, no markdown.`;
 
   try {
-    const content = await callOpenRouter({
+    const content = await callOpenRouter(req, {
       systemPrompt,
       userPrompt: `Topic: ${topic}`,
       model: 'perplexity/sonar-pro-search',
@@ -1124,4 +1144,68 @@ async function aiWriteRoute(req: VercelRequest, res: VercelResponse) {
   } catch (e: any) {
     return fail(res, 500, e?.message ?? 'ai write failed');
   }
+}
+
+// =====================================================================
+// Admin secrets — vault-backed
+// =====================================================================
+async function listAdminSecretsRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireAdmin(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { supa } = r;
+  // RLS on app_secrets gates this to admins.
+  const { data, error } = await supa
+    .from('app_secrets')
+    .select('key_name, description, last4, created_at, rotated_at')
+    .order('key_name');
+  if (error) return fail(res, 500, error.message);
+  res.status(200).json(data ?? []);
+}
+
+async function createAdminSecretRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireAdmin(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { supa } = r;
+  const body = (req.body ?? {}) as { key_name?: string; value?: string; description?: string };
+  if (!body.key_name || !body.value) return fail(res, 400, 'key_name_and_value_required');
+  const { error } = await supa.rpc('admin_create_secret', {
+    p_key_name: body.key_name,
+    p_value: body.value,
+    p_description: body.description ?? null,
+  });
+  if (error) return fail(res, 500, error.message);
+  res.status(200).json({ ok: true });
+}
+
+async function rotateAdminSecretRoute(
+  req: VercelRequest,
+  res: VercelResponse,
+  keyName: string,
+) {
+  const r = await requireAdmin(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { supa } = r;
+  if (!keyName) return fail(res, 400, 'missing_key');
+  const body = (req.body ?? {}) as { value?: string };
+  if (!body.value) return fail(res, 400, 'value_required');
+  const { error } = await supa.rpc('admin_rotate_secret', {
+    p_key_name: keyName,
+    p_new_value: body.value,
+  });
+  if (error) return fail(res, 500, error.message);
+  res.status(200).json({ ok: true });
+}
+
+async function deleteAdminSecretRoute(
+  req: VercelRequest,
+  res: VercelResponse,
+  keyName: string,
+) {
+  const r = await requireAdmin(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { supa } = r;
+  if (!keyName) return fail(res, 400, 'missing_key');
+  const { error } = await supa.rpc('admin_delete_secret', { p_key_name: keyName });
+  if (error) return fail(res, 500, error.message);
+  res.status(204).end();
 }
