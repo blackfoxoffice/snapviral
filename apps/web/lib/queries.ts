@@ -433,6 +433,16 @@ export function useTopicCategories() {
   });
 }
 
+export function useAiWrite() {
+  return useMutation({
+    mutationFn: (args: {
+      kind: 'headline' | 'context';
+      topic: string;
+      language?: import('@newsflow/shared').ProjectLanguage;
+    }) => api.aiWrite(args),
+  });
+}
+
 // ===== Blog (public) =====
 
 export function useBlogPosts(args?: { limit?: number; tag?: string }) {

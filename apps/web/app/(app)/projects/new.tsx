@@ -26,6 +26,7 @@ import { DurationPicker } from '../../../components/project/DurationPicker';
 import { VoicePicker } from '../../../components/project/VoicePicker';
 import { StylePicker } from '../../../components/project/StylePicker';
 import { TopicSuggestions } from '../../../components/project/TopicSuggestions';
+import { AiWriteButton } from '../../../components/project/AiWriteButton';
 import { useCreateProject, useGenerateProject, useVoices } from '../../../lib/queries';
 import { LANG_SELECT_OPTIONS, LANGUAGE_LABEL } from '../../../lib/languages';
 
@@ -194,20 +195,36 @@ export default function NewProject() {
                 {inputMode === 'research' ? (
                   <View className="gap-3">
                     <TopicSuggestions language={language} selected={topic} onPick={setTopic} />
-                    <Input
-                      label="Topic or headline"
-                      value={topic}
-                      onChangeText={setTopic}
-                      placeholder="e.g., Chennai floods relief update"
-                      error={errors.topic}
-                    />
-                    <Textarea
-                      label="Extra context (optional)"
-                      rows={4}
-                      value={userScript}
-                      onChangeText={setUserScript}
-                      placeholder="Any angles, constraints, or extra facts..."
-                    />
+                    <View className="gap-1.5">
+                      <Input
+                        label="Topic or headline"
+                        value={topic}
+                        onChangeText={setTopic}
+                        placeholder="e.g., Chennai floods relief update"
+                        error={errors.topic}
+                      />
+                      <AiWriteButton
+                        kind="headline"
+                        topic={topic}
+                        language={language}
+                        onResult={setTopic}
+                      />
+                    </View>
+                    <View className="gap-1.5">
+                      <Textarea
+                        label="Extra context (optional)"
+                        rows={4}
+                        value={userScript}
+                        onChangeText={setUserScript}
+                        placeholder="Any angles, constraints, or extra facts..."
+                      />
+                      <AiWriteButton
+                        kind="context"
+                        topic={topic}
+                        language={language}
+                        onResult={setUserScript}
+                      />
+                    </View>
                     <View className="flex-row items-start gap-2 rounded-lg bg-state-info-soft p-3 border border-state-info/20">
                       <Globe size={14} color="#42A5F5" />
                       <Text className="flex-1 text-[11px] text-state-info leading-relaxed">
@@ -233,20 +250,36 @@ export default function NewProject() {
                 {inputMode === 'topic' ? (
                   <View className="gap-3">
                     <TopicSuggestions language={language} selected={topic} onPick={setTopic} />
-                    <Input
-                      label="Topic or headline"
-                      value={topic}
-                      onChangeText={setTopic}
-                      placeholder="e.g., Chennai floods relief update"
-                      error={errors.topic}
-                    />
-                    <Textarea
-                      label="Extra context (optional)"
-                      rows={4}
-                      value={userScript}
-                      onChangeText={setUserScript}
-                      placeholder="Any facts, angles or details you want included..."
-                    />
+                    <View className="gap-1.5">
+                      <Input
+                        label="Topic or headline"
+                        value={topic}
+                        onChangeText={setTopic}
+                        placeholder="e.g., Chennai floods relief update"
+                        error={errors.topic}
+                      />
+                      <AiWriteButton
+                        kind="headline"
+                        topic={topic}
+                        language={language}
+                        onResult={setTopic}
+                      />
+                    </View>
+                    <View className="gap-1.5">
+                      <Textarea
+                        label="Extra context (optional)"
+                        rows={4}
+                        value={userScript}
+                        onChangeText={setUserScript}
+                        placeholder="Any facts, angles or details you want included..."
+                      />
+                      <AiWriteButton
+                        kind="context"
+                        topic={topic}
+                        language={language}
+                        onResult={setUserScript}
+                      />
+                    </View>
                     <View className="flex-row items-start gap-2 rounded-lg bg-state-warning-soft p-3 border border-state-warning/20">
                       <AlertTriangle size={14} color="#FFB300" />
                       <Text className="flex-1 text-[11px] text-state-warning leading-relaxed">

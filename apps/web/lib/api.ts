@@ -510,6 +510,19 @@ export const api = {
     return parseResponse(res);
   },
 
+  async aiWrite(args: {
+    kind: 'headline' | 'context';
+    topic: string;
+    language?: import('@newsflow/shared').ProjectLanguage;
+  }): Promise<{ text: string }> {
+    const res = await fetch(`${BASE_URL}/api/automation/ai-write`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(args),
+    });
+    return parseResponse(res);
+  },
+
   // ===== Blog (public) =====
 
   async listBlogPosts(args?: { limit?: number; tag?: string }): Promise<{ posts: BlogPost[] }> {

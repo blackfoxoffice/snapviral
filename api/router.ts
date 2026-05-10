@@ -109,6 +109,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await sendAdminNotification(req, res, segments[2] ?? '');
     }
 
+    // ---- Automation (topic ideation) ----
+    if (path === '/automation/topic-categories' && method === 'GET')
+      return await getTopicCategories(req, res);
+    if (path === '/automation/generate-topics' && method === 'POST')
+      return await generateTopicsRoute(req, res);
+    if (path === '/automation/ai-write' && method === 'POST')
+      return await aiWriteRoute(req, res);
+
     // ---- Blog (admin) ----
     if (path === '/blog/admin/posts' && method === 'GET') return await listAdminPosts(req, res);
     if (path === '/blog/admin/posts' && method === 'POST') return await createBlogPost(req, res);
@@ -777,4 +785,343 @@ async function deleteBlogPost(req: VercelRequest, res: VercelResponse, id: strin
   const { error } = await supa.from('blog_posts').delete().eq('id', id);
   if (error) return fail(res, 500, error.message);
   res.status(204).end();
+}
+
+// =====================================================================
+// Automation — Topic categories + AI topic generation (OpenRouter)
+// =====================================================================
+type TopicCategoryKey =
+  | 'trending_news'
+  | 'bible_stories'
+  | 'random_ai_story'
+  | 'travel_destinations'
+  | 'what_if'
+  | 'scary_stories'
+  | 'bedtime_stories'
+  | 'interesting_history'
+  | 'urban_legends'
+  | 'motivational'
+  | 'fun_facts'
+  | 'long_form_jokes'
+  | 'life_pro_tips'
+  | 'eli5'
+  | 'mythology'
+  | 'philosophy'
+  | 'finance_tips';
+
+interface CategorySpec {
+  label: string;
+  systemFraming: string;
+  userPrompt: string;
+  formHint: string;
+  isLive: boolean;
+}
+
+const CATEGORIES: Record<TopicCategoryKey, CategorySpec> = {
+  trending_news: {
+    label: 'Trending news',
+    systemFraming:
+      "You are a news editor helping a creator stock their content queue. Search the live web for what's trending RIGHT NOW across general news, politics, tech, sports, entertainment, and India local.",
+    userPrompt: 'Trending news topics',
+    formHint: 'a single short news headline (8-15 words). Declarative. No question marks.',
+    isLive: true,
+  },
+  bible_stories: {
+    label: 'Bible stories',
+    systemFraming:
+      'You are a content strategist for a creator who tells classic Bible stories in short-form video. Pick well-known and lesser-known stories that teach a moral or have dramatic narrative tension.',
+    userPrompt: 'Bible story topics for short-form video',
+    formHint: 'a story title and angle',
+    isLive: false,
+  },
+  random_ai_story: {
+    label: 'Random AI story',
+    systemFraming:
+      'You are a creative writer who invents original short-form video story premises. Mix genres — sci-fi, mystery, drama, magical realism. Each premise should hook a viewer in the first sentence.',
+    userPrompt: 'Random original story premises',
+    formHint: 'a one-line story premise (8-18 words) that opens with a hook',
+    isLive: false,
+  },
+  travel_destinations: {
+    label: 'Travel destinations',
+    systemFraming:
+      'You are a travel editor helping a creator who covers underrated and famous destinations. Mix budget gems, hidden spots, and bucket-list places.',
+    userPrompt: 'Travel destination topics for short-form video',
+    formHint: 'a destination + one-line angle',
+    isLive: true,
+  },
+  what_if: {
+    label: 'What if?',
+    systemFraming:
+      'You are a creative writer specializing in "What if" thought experiments — counterfactuals about history, science, society, technology. Each prompt should make a viewer want to know the answer.',
+    userPrompt: '"What if" thought-experiment topics',
+    formHint: 'a "What if..." question (10-18 words)',
+    isLive: false,
+  },
+  scary_stories: {
+    label: 'Scary stories',
+    systemFraming:
+      'You are a horror writer who pitches short-form scary story ideas. Real-feeling, unsettling, no gore — atmospheric dread. Mix urban legends, paranormal encounters, and unexplained mysteries.',
+    userPrompt: 'Scary / horror story topics for short-form video',
+    formHint: 'a story title with a chilling hook',
+    isLive: false,
+  },
+  bedtime_stories: {
+    label: 'Bedtime stories',
+    systemFraming:
+      "You are a children's author. Pitch calming, kind bedtime story ideas — animals, gentle moral lessons, magical worlds, no scares. Suitable for ages 4-10.",
+    userPrompt: 'Calming bedtime story ideas for kids',
+    formHint: 'a gentle story title with a one-line summary',
+    isLive: false,
+  },
+  interesting_history: {
+    label: 'Interesting history',
+    systemFraming:
+      'You are a history nerd who pitches under-the-radar historical stories that read like a thriller. Avoid the obvious greatest-hits — find the strange, specific, surprising stories.',
+    userPrompt: 'Fascinating but lesser-known history topics',
+    formHint: 'a historical event + angle',
+    isLive: false,
+  },
+  urban_legends: {
+    label: 'Urban legends',
+    systemFraming:
+      'You are a folklorist who collects regional urban legends from around the world — especially South Asia, Latin America, East Asia. Real folklore, not internet creepypasta.',
+    userPrompt: 'Real urban legend topics from world folklore',
+    formHint: 'a legend name + one-line hook',
+    isLive: false,
+  },
+  motivational: {
+    label: 'Motivational',
+    systemFraming:
+      'You are a content strategist for a motivational creator. Pitch sharp, specific topics — not platitudes. Stories of resilience, useful frames, lessons from real lives.',
+    userPrompt: 'Motivational topics with a specific angle',
+    formHint: 'a punchy headline (no clichés like "follow your dreams")',
+    isLive: false,
+  },
+  fun_facts: {
+    label: 'Fun facts',
+    systemFraming:
+      'You are a science communicator pitching genuinely surprising facts that most people do not know. Verifiable, specific, counterintuitive. No "did you know" pre-amble.',
+    userPrompt: 'Surprising and verifiable fun facts',
+    formHint: 'a one-line fact that ends with the surprise',
+    isLive: false,
+  },
+  long_form_jokes: {
+    label: 'Long-form jokes',
+    systemFraming:
+      'You are a stand-up writer pitching long-form joke setups for short-form video. The setup should land in 30-45 seconds with a clean punchline. PG-13. No edgy/offensive humor.',
+    userPrompt: 'Long-form joke setups',
+    formHint: 'a joke title or one-line setup',
+    isLive: false,
+  },
+  life_pro_tips: {
+    label: 'Life pro tips',
+    systemFraming:
+      'You are a productivity / life-hack writer. Pitch specific, useful, non-obvious tips. Each should be actionable today. No generic advice.',
+    userPrompt: 'Life pro tips that are non-obvious',
+    formHint: 'a sharp tip',
+    isLive: false,
+  },
+  eli5: {
+    label: 'ELI5',
+    systemFraming:
+      "You are an explainer writer pitching \"Explain Like I'm 5\" topics. Pick complex concepts that beg a clear, simple explanation — economics, physics, biology, computing, geopolitics.",
+    userPrompt: 'ELI5 explainer topics',
+    formHint: 'a topic phrased as "ELI5: how does X work?"',
+    isLive: false,
+  },
+  mythology: {
+    label: 'Mythology',
+    systemFraming:
+      'You are a comparative-mythology writer. Pitch stories from Indian, Greek, Norse, Egyptian, Japanese, African and Mesoamerican myth. Mix famous and obscure.',
+    userPrompt: 'Mythology story topics from world traditions',
+    formHint: 'a myth title + tradition',
+    isLive: false,
+  },
+  philosophy: {
+    label: 'Philosophy',
+    systemFraming:
+      'You are a philosophy explainer pitching big ideas in accessible ways. Cover ethics, metaphysics, eastern + western thought. Each topic should provoke.',
+    userPrompt: 'Philosophy topics for short-form video',
+    formHint: 'a philosophical question or idea',
+    isLive: false,
+  },
+  finance_tips: {
+    label: 'Finance tips',
+    systemFraming:
+      'You are a financial-literacy writer pitching specific, useful tips for individual investors and savers. India + global context. No get-rich-quick. No specific stock picks.',
+    userPrompt: 'Personal finance topics',
+    formHint: 'a sharp finance tip or concept',
+    isLive: true,
+  },
+};
+
+const LANG_NAME: Record<string, string> = {
+  ta: 'Tamil', hi: 'Hindi', kn: 'Kannada', te: 'Telugu', ml: 'Malayalam',
+  bn: 'Bengali', mr: 'Marathi', gu: 'Gujarati', pa: 'Punjabi', ur: 'Urdu',
+  en: 'English',
+  es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese',
+  nl: 'Dutch', pl: 'Polish', sv: 'Swedish', da: 'Danish', fi: 'Finnish',
+  no: 'Norwegian', ro: 'Romanian', hu: 'Hungarian', cs: 'Czech', sk: 'Slovak',
+  hr: 'Croatian', bg: 'Bulgarian', el: 'Greek', tr: 'Turkish', ru: 'Russian',
+  uk: 'Ukrainian',
+  ar: 'Arabic',
+  zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
+  vi: 'Vietnamese', id: 'Indonesian', ms: 'Malay', fil: 'Filipino',
+};
+
+async function getTopicCategories(_req: VercelRequest, res: VercelResponse) {
+  const categories = (Object.entries(CATEGORIES) as [TopicCategoryKey, CategorySpec][])
+    .map(([key, spec]) => ({ key, label: spec.label }));
+  res.status(200).json({ categories });
+}
+
+async function callOpenRouter(args: {
+  systemPrompt: string;
+  userPrompt: string;
+  jsonSchema?: Record<string, unknown>;
+  model?: string;
+  temperature?: number;
+}): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+
+  const body: Record<string, unknown> = {
+    model: args.model ?? 'perplexity/sonar-pro-search',
+    messages: [
+      { role: 'system', content: args.systemPrompt },
+      { role: 'user', content: args.userPrompt },
+    ],
+    temperature: args.temperature ?? 0.5,
+  };
+  if (args.jsonSchema) {
+    body.response_format = {
+      type: 'json_schema',
+      json_schema: { name: 'out', schema: args.jsonSchema },
+    };
+  }
+
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.OPENROUTER_REFERER ?? 'https://app.snapviral.in',
+      'X-Title': process.env.OPENROUTER_TITLE ?? 'SnapViral',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!r.ok) {
+    const errText = await r.text();
+    throw new Error(`openrouter call failed: ${r.status} ${errText.slice(0, 300)}`);
+  }
+  const json = (await r.json()) as { choices: { message: { content: string } }[] };
+  const content = json.choices[0]?.message.content?.trim();
+  if (!content) throw new Error('openrouter returned empty content');
+  return content;
+}
+
+function stripJsonFences(s: string): string {
+  return s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+}
+
+async function generateTopicsRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+
+  const body = (req.body ?? {}) as {
+    language?: string;
+    niche?: string;
+    count?: number;
+    category?: TopicCategoryKey;
+  };
+  const language = body.language ?? 'ta';
+  if (!LANG_NAME[language]) return fail(res, 400, 'invalid_language');
+
+  const langName = LANG_NAME[language];
+  const count = Math.max(3, Math.min(body.count ?? 12, 30));
+  const niche = body.niche?.trim();
+  const category = (body.category ?? 'trending_news') as TopicCategoryKey;
+  const spec = CATEGORIES[category];
+  if (!spec) return fail(res, 400, 'invalid_category');
+
+  const nicheClause = niche ? ` focused on "${niche}".` : '';
+  const systemPrompt = `${spec.systemFraming}${nicheClause}
+
+Return a JSON object with this exact shape:
+{
+  "topics": ["${spec.formHint}", ...]
+}
+
+Rules:
+- Exactly ${count} topics.
+- Each topic = ${spec.formHint}.
+- Written in ${langName}. Native script, no transliteration.
+- ${spec.isLive ? 'Verifiable, currently-trending. No speculation.' : 'Original or well-attested. No speculation as fact.'}
+- No duplicates. No numbering. No quotes inside the strings.
+- Output ONLY the JSON object. No preamble, no markdown.`;
+
+  try {
+    const content = await callOpenRouter({
+      systemPrompt,
+      userPrompt: niche ? `${spec.userPrompt} (focus: ${niche})` : spec.userPrompt,
+      jsonSchema: {
+        type: 'object',
+        properties: { topics: { type: 'array', items: { type: 'string' } } },
+        required: ['topics'],
+        additionalProperties: false,
+      },
+    });
+    const parsed = JSON.parse(stripJsonFences(content)) as { topics?: unknown };
+    const topics = Array.isArray(parsed.topics)
+      ? parsed.topics.filter((t): t is string => typeof t === 'string' && t.trim().length >= 3)
+      : [];
+    if (topics.length === 0) return fail(res, 502, 'no usable topics');
+    res.status(200).json({ topics: topics.map((t) => t.trim()).slice(0, count) });
+  } catch (e: any) {
+    return fail(res, 500, e?.message ?? 'topic generation failed');
+  }
+}
+
+/**
+ * POST /automation/ai-write
+ * Body: { kind: 'headline' | 'context', topic: string, language?: string }
+ * Returns: { text: string }
+ *
+ * Used by the New Project "Topic only" flow so the user can have AI fill in
+ * either the headline (refined topic) or the extra-context paragraph.
+ */
+async function aiWriteRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+
+  const body = (req.body ?? {}) as {
+    kind?: 'headline' | 'context';
+    topic?: string;
+    language?: string;
+  };
+  const kind = body.kind ?? 'headline';
+  const topic = (body.topic ?? '').trim();
+  if (!topic) return fail(res, 400, 'topic_required');
+  const language = body.language ?? 'en';
+  const langName = LANG_NAME[language] ?? 'English';
+
+  const systemPrompt =
+    kind === 'headline'
+      ? `You are a viral short-form video editor. Given a rough topic, write ONE final video headline in ${langName} that hooks the viewer. 8-14 words. Declarative or dramatic. No question marks unless essential. Native script, no transliteration. Output the headline ONLY — no quotes, no explanation, no markdown.`
+      : `You are a senior video editor. Given a video topic, write a single short paragraph (40-80 words) of EXTRA CONTEXT — the specific facts, angles, names, numbers, or perspectives the AI scriptwriter should weave into the script. Concrete and useful, not generic. Plain English. No bullet points. Output the paragraph ONLY — no preamble, no markdown.`;
+
+  try {
+    const content = await callOpenRouter({
+      systemPrompt,
+      userPrompt: `Topic: ${topic}`,
+      model: 'perplexity/sonar-pro-search',
+      temperature: 0.6,
+    });
+    const cleaned = content.replace(/^["']|["']$/g, '').trim();
+    res.status(200).json({ text: cleaned });
+  } catch (e: any) {
+    return fail(res, 500, e?.message ?? 'ai write failed');
+  }
 }
