@@ -157,25 +157,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function getVoices(req: VercelRequest, res: VercelResponse) {
   const r = await requireUser(req);
   if ('error' in r) return fail(res, r.error.status, r.error.message);
-
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) return fail(res, 500, 'ELEVENLABS_API_KEY not configured');
+  const { supa } = r;
 
   const language = (req.query.language as string) ?? 'ta';
   const pageSize = Math.min(Number(req.query.page_size) || 20, 50);
 
-  const url = new URL('https://api.elevenlabs.io/v1/shared-voices');
-  url.searchParams.set('language', language);
-  url.searchParams.set('page_size', String(pageSize));
-
-  const elRes = await fetch(url.toString(), { headers: { 'xi-api-key': apiKey } });
-  if (!elRes.ok) {
-    const text = await elRes.text();
-    return fail(res, elRes.status, `ElevenLabs error: ${text}`);
+  // The ElevenLabs API key lives encrypted in vault (app_secrets WHERE
+  // key_name='ELEVENLABS_API_KEY'). The RPC reads the decrypted value,
+  // calls ElevenLabs via the http extension, returns the JSON.
+  const { data, error } = await supa.rpc('el_get_shared_voices', {
+    p_language: language,
+    p_page_size: pageSize,
+  });
+  if (error) {
+    if (error.message?.includes('elevenlabs_key_not_set')) {
+      return fail(
+        res,
+        503,
+        'elevenlabs_key_not_set: ask an admin to set ELEVENLABS_API_KEY at /admin/secrets',
+      );
+    }
+    return fail(res, 500, error.message ?? 'voices_fetch_failed');
   }
 
-  const data = (await elRes.json()) as {
-    voices: Array<{
+  const json = (data ?? {}) as {
+    voices?: Array<{
       voice_id: string;
       name: string;
       gender: string;
@@ -186,10 +192,10 @@ async function getVoices(req: VercelRequest, res: VercelResponse) {
       preview_url: string | null;
       category: string;
     }>;
-    total_count: number;
+    total_count?: number;
   };
 
-  const voices = data.voices
+  const voices = (json.voices ?? [])
     .filter((v) => v.preview_url)
     .map((v) => ({
       voice_id: v.voice_id,
@@ -203,7 +209,7 @@ async function getVoices(req: VercelRequest, res: VercelResponse) {
       category: v.category,
     }));
 
-  res.status(200).json({ voices, total_count: data.total_count });
+  res.status(200).json({ voices, total_count: json.total_count ?? 0 });
 }
 
 // =====================================================================
