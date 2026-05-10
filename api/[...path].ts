@@ -47,9 +47,13 @@ async function uniqueSlug(supa: any, base: string, ignoreId?: string): Promise<s
 // Main handler — pulls the URL path, dispatches to the right route.
 // =====================================================================
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Vercel passes the catch-all segments in req.query.path as an array.
-  const raw = req.query.path;
-  const segments = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  // Pull the path from the URL — req.query.path can be empty depending on
+  // how Vercel resolves the catch-all + rewrites.
+  const fullUrl = (req as any).url ?? '';
+  const pathOnly = fullUrl.split('?')[0] ?? '';
+  // Strip leading `/api/` (or `/api`) so we work with just the route.
+  const stripped = pathOnly.replace(/^\/api\/?/, '');
+  const segments = stripped ? stripped.split('/').filter(Boolean) : [];
   const path = '/' + segments.join('/');
   const method = (req.method ?? 'GET').toUpperCase();
 
