@@ -38,6 +38,27 @@ const FONT = {
   mono: '"JetBrains Mono", "SF Mono", Menlo, monospace',
 };
 
+/**
+ * Strip Expo Router internal query params (`__EXPO_ROUTER_*`) and trim
+ * whitespace. Users sometimes paste URLs they copied from the app's address
+ * bar; those URLs may carry router metadata that we never want to persist.
+ */
+function sanitizeCtaUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  try {
+    const url = new URL(trimmed);
+    const keys = [...url.searchParams.keys()];
+    for (const k of keys) {
+      if (k.startsWith('__EXPO_ROUTER')) url.searchParams.delete(k);
+    }
+    return url.toString().replace(/\?$/, '');
+  } catch {
+    // Not a valid URL — return as-is, server-side validation handles it.
+    return trimmed;
+  }
+}
+
 const KIND_OPTIONS: Array<{ value: NotificationKind; label: string; Icon: any; color: string }> = [
   { value: 'announcement', label: 'Announcement', Icon: Info, color: '#0F172A' },
   { value: 'marketing', label: 'Marketing', Icon: Megaphone, color: '#E11D2C' },
@@ -97,7 +118,7 @@ export default function AdminNotifications() {
         kind,
         audience,
         cta_label: ctaLabel.trim() || null,
-        cta_url: ctaUrl.trim() || null,
+        cta_url: sanitizeCtaUrl(ctaUrl) || null,
         send_now: sendNow,
       });
       toast.success(sendNow ? 'Notification sent' : 'Draft saved');

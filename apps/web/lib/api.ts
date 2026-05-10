@@ -51,15 +51,18 @@ export interface VoiceOption {
   category: string;
 }
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+// On web (in a browser) we always use same-origin /api/* — the API is now
+// fully on Vercel as serverless functions, co-deployed with the web app.
+// On native (RN/APK), fall back to the env var, then localhost in dev.
+const BASE_URL =
+  typeof window !== 'undefined' && typeof window.location !== 'undefined'
+    ? window.location.origin
+    : (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://app.snapviral.in');
 
-// Billing + admin-billing routes live on Vercel as serverless functions on
-// the same origin as the web app. Anything on /api/billing/* and a couple
-// /api/admin/* endpoints are served by Vercel; the rest of the API stays on
-// Railway (BASE_URL above) because the video pipeline needs FFmpeg.
+// Billing endpoints share the same Vercel deployment.
 const BILLING_BASE_URL =
   process.env.EXPO_PUBLIC_BILLING_API_BASE_URL ??
-  (typeof window !== 'undefined' ? window.location.origin : '');
+  (typeof window !== 'undefined' ? window.location.origin : 'https://app.snapviral.in');
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
