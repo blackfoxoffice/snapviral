@@ -82,6 +82,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (method === 'GET') return await getProject(req, res, id);
       if (method === 'DELETE') return await deleteProject(req, res, id);
     }
+    if (
+      path.startsWith('/projects/') &&
+      segments.length === 3 &&
+      segments[2] === 'generate' &&
+      method === 'POST'
+    ) {
+      return await generateProjectStub(req, res, segments[1] ?? '');
+    }
     if (path === '/dashboard/stats' && method === 'GET') return await dashboardStats(req, res);
 
     // ---- Notifications (user) ----
@@ -312,6 +320,39 @@ async function deleteProject(req: VercelRequest, res: VercelResponse, id: string
   const { error } = await supa.from('projects').delete().eq('id', id).eq('user_id', user.id);
   if (error) return fail(res, 500, error.message);
   res.status(204).end();
+}
+
+/**
+ * POST /projects/[id]/generate — kicks off the script → images → voice →
+ * compose pipeline. The full pipeline does FFmpeg video assembly which
+ * cannot run inside a Vercel serverless function (no FFmpeg binary, 60s
+ * runtime cap on Hobby). Until a worker host is connected, mark the
+ * project as failed with an explanatory error so the UI shows something
+ * meaningful instead of a silent timeout.
+ */
+async function generateProjectStub(req: VercelRequest, res: VercelResponse, id: string) {
+  if (!id) return fail(res, 400, 'missing_id');
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { user, supa } = r;
+
+  const errorMessage =
+    'Video generation worker is not deployed. The script + image + voice pipeline ' +
+    'requires FFmpeg + a long-running host (5-15 min per video) which Vercel ' +
+    'serverless functions cannot run. An admin needs to deploy apps/api to a ' +
+    'worker host (Render / Fly / Railway) and wire it up.';
+
+  await supa
+    .from('projects')
+    .update({
+      status: 'failed',
+      error: errorMessage,
+      finished_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  return fail(res, 501, errorMessage);
 }
 
 // =====================================================================
