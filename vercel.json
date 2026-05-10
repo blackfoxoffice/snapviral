@@ -20,6 +20,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/((?!sw\\.js|manifest\\.webmanifest|icons/.*|_expo/.*|favicon\\.ico|robots\\.txt).*)", "destination": "/index.html" }
+    { "source": "/((?!api/.*|sw\\.js|manifest\\.webmanifest|icons/.*|about/.*|_expo/.*|favicon\\.ico|robots\\.txt).*)", "destination": "/index.html" }
   ]
 }
