@@ -20,6 +20,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/(?<_p>.*)", "destination": "/api/router?_p=$_p" },
     { "source": "/((?!api/.*|sw\\.js|manifest\\.webmanifest|icons/.*|about/.*|_expo/.*|favicon\\.ico|robots\\.txt).*)", "destination": "/index.html" }
   ]
 }

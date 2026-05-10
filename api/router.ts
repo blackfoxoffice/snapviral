@@ -47,13 +47,17 @@ async function uniqueSlug(supa: any, base: string, ignoreId?: string): Promise<s
 // Main handler — pulls the URL path, dispatches to the right route.
 // =====================================================================
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Pull the path from the URL — req.query.path can be empty depending on
-  // how Vercel resolves the catch-all + rewrites.
-  const fullUrl = (req as any).url ?? '';
-  const pathOnly = fullUrl.split('?')[0] ?? '';
-  // Strip leading `/api/` (or `/api`) so we work with just the route.
-  const stripped = pathOnly.replace(/^\/api\/?/, '');
-  const segments = stripped ? stripped.split('/').filter(Boolean) : [];
+  // The vercel.json rewrite carries the original path in `_p`. Fall back to
+  // the request URL for direct hits.
+  const rawP = (req.query as Record<string, string | string[] | undefined>)._p;
+  const fromQuery = Array.isArray(rawP) ? rawP.join('/') : rawP;
+  let routePath: string = fromQuery ?? '';
+  if (!routePath) {
+    const fullUrl = (req as any).url ?? '';
+    const pathOnly = fullUrl.split('?')[0] ?? '';
+    routePath = pathOnly.replace(/^\/api\/?/, '');
+  }
+  const segments = routePath ? routePath.split('/').filter(Boolean) : [];
   const path = '/' + segments.join('/');
   const method = (req.method ?? 'GET').toUpperCase();
 
