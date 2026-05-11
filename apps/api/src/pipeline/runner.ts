@@ -4,7 +4,6 @@ import { ingest, type SourceContext } from './steps/01-ingest.js';
 import { generateScript } from './steps/02-script.js';
 import { generateSceneImages } from './steps/03-images.js';
 import { generateVoiceover } from './steps/04-voice.js';
-import { buildSubtitles } from './steps/05-align.js';
 import { composeFinalVideo } from './steps/06-compose.js';
 export { buildFullNarration } from './utils.js';
 
@@ -76,41 +75,40 @@ export async function runPipeline(projectId: string): Promise<void> {
         }),
       30,
     );
-    const images = await step(
-      'images',
-      () =>
-        generateSceneImages({
-          projectId,
-          userId: typed.user_id,
-          script,
-          imageStyle: (typed.image_style ?? 'realistic') as ImageStyle,
-          language: typed.language as ProjectLanguage,
-        }),
-      55,
-    );
-    const voice = await step(
-      'voice',
-      () =>
-        generateVoiceover({
-          projectId,
-          userId: typed.user_id,
-          script,
-          language: typed.language,
-          voiceId: typed.voice_id,
-        }),
-      75,
-    );
-    const subtitles = await step(
-      'align',
-      () =>
-        buildSubtitles({
-          projectId,
-          userId: typed.user_id,
-          script,
-          alignment: voice.alignment,
-        }),
-      85,
-    );
+    // Images + voice are independent of each other — both consume `script`
+    // and write to storage. Running them in parallel ~halves the runtime of
+    // the two slowest pipeline steps.
+    await supa.from('projects').update({ current_step: 'images+voice' }).eq('id', projectId);
+
+    const [images, voice] = await Promise.all([
+      step(
+        'images',
+        () =>
+          generateSceneImages({
+            projectId,
+            userId: typed.user_id,
+            script,
+            imageStyle: (typed.image_style ?? 'realistic') as ImageStyle,
+            language: typed.language as ProjectLanguage,
+          }),
+        65,
+      ),
+      step(
+        'voice',
+        () =>
+          generateVoiceover({
+            projectId,
+            userId: typed.user_id,
+            script,
+            language: typed.language,
+            voiceId: typed.voice_id,
+          }),
+        65,
+      ),
+    ]);
+
+    // Subtitle generation removed — videos render without a burned-in
+    // caption layer. The align step (buildSubtitles) is skipped entirely.
     const finalPath = await step(
       'compose',
       () =>
@@ -121,7 +119,7 @@ export async function runPipeline(projectId: string): Promise<void> {
           imagePaths: images.localPaths,
           alignment: voice.alignment,
           audioPath: voice.localPath,
-          srtPath: subtitles.localPath,
+          srtPath: null,
           durationSeconds: typed.duration_seconds,
           logoPath: typed.logo_path,
           title: typed.title,

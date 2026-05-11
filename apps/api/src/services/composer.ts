@@ -118,7 +118,7 @@ export async function composeFinalVideoFiles(args: {
   imagePaths: string[];
   sceneDurations: number[];
   audioPath: string;
-  srtPath: string;
+  srtPath: string | null;
   outputPath: string;
   tmpDir: string;
   logoPath?: string;
@@ -242,7 +242,7 @@ async function checkFilterCaps(): Promise<{ subtitles: boolean; drawtext: boolea
 async function finalMux(args: {
   silentVideoPath: string;
   audioPath: string;
-  srtPath: string;
+  srtPath: string | null;
   outputPath: string;
   title?: string;
   language: ProjectLanguage;
@@ -250,7 +250,8 @@ async function finalMux(args: {
   const caps = await checkFilterCaps();
   const filters: string[] = [];
 
-  if (caps.subtitles) {
+  // srtPath = null when the pipeline skips the subtitle-build step entirely.
+  if (args.srtPath && caps.subtitles) {
     // Movie-style captions, bottom of frame, language-aware font.
     //
     // CRITICAL: original_size=${WIDTH}x${HEIGHT} — without this libass uses its

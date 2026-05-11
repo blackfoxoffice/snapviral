@@ -12,7 +12,7 @@ interface ComposeArgs {
   imagePaths: string[];
   alignment: ElevenLabsAlignment;
   audioPath: string;
-  srtPath: string;
+  srtPath: string | null;
   durationSeconds: number;
   logoPath?: string | null;
   title?: string;
