@@ -15,6 +15,39 @@ import {
 // Hobby plan's hard cap. Fast paths (gpt-4o-mini) return in 2-5s.
 export const config = { maxDuration: 60 };
 
+// Long-running pipeline routes proxy to the Railway worker (apps/api) that
+// runs FFmpeg + the full ingest→compose pipeline. Vercel functions can't
+// run that work themselves (60s cap, no FFmpeg binary).
+const WORKER_BASE = (
+  process.env.PIPELINE_WORKER_URL ?? 'https://snapviral-api-production.up.railway.app'
+).replace(/\/$/, '');
+
+async function proxyToWorker(
+  req: VercelRequest,
+  res: VercelResponse,
+  upstreamPath: string,
+): Promise<void> {
+  const url = WORKER_BASE + upstreamPath;
+  const method = (req.method ?? 'GET').toUpperCase();
+  const auth = (req.headers.authorization ?? req.headers.Authorization) as string | undefined;
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (auth) headers.authorization = auth;
+
+  const body =
+    method === 'GET' || method === 'HEAD'
+      ? undefined
+      : typeof req.body === 'string'
+        ? req.body
+        : JSON.stringify(req.body ?? {});
+
+  const upstream = await fetch(url, { method, headers, body });
+  const text = await upstream.text();
+  res.status(upstream.status);
+  const ct = upstream.headers.get('content-type');
+  if (ct) res.setHeader('content-type', ct);
+  res.send(text);
+}
+
 // =====================================================================
 // Helpers
 // =====================================================================
@@ -88,7 +121,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       segments[2] === 'generate' &&
       method === 'POST'
     ) {
-      return await generateProjectStub(req, res, segments[1] ?? '');
+      // Forward to the Railway worker which runs the full pipeline.
+      return await proxyToWorker(req, res, `/api/projects/${segments[1]}/generate`);
+    }
+
+    // Pipeline status / job inspection lives on the worker too.
+    if (path.startsWith('/pipeline/')) {
+      return await proxyToWorker(req, res, `/api${path}`);
+    }
+    // YouTube OAuth + upload also need the worker (it owns the OAuth state).
+    if (path.startsWith('/youtube/')) {
+      return await proxyToWorker(req, res, `/api${path}`);
+    }
+    // Automation + scheduling endpoints we haven't ported to Vercel.
+    if (path.startsWith('/automation/') &&
+        path !== '/automation/topic-categories' &&
+        path !== '/automation/generate-topics' &&
+        path !== '/automation/ai-write') {
+      return await proxyToWorker(req, res, `/api${path}`);
     }
     if (path === '/dashboard/stats' && method === 'GET') return await dashboardStats(req, res);
 
