@@ -57,8 +57,13 @@ export function ToastHost() {
   return (
     <View
       pointerEvents="box-none"
-      className="absolute right-4 top-4 z-50 gap-2"
-      style={{ maxWidth: 340 }}
+      className="absolute right-4 z-50 gap-2"
+      style={{
+        maxWidth: 340,
+        // Sit below the 48px TopBar AND below any device status bar/notch
+        // so the toast doesn't overlap the page header in the APK/PWA.
+        top: 'calc(env(safe-area-inset-top, 0px) + 56px)' as any,
+      }}
     >
       <AnimatePresence>
         {items.map((t) => {

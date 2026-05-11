@@ -18,7 +18,17 @@ export function TopBar() {
     'Account';
 
   return (
-    <View className="h-12 flex-row items-center justify-between border-b border-surface-border bg-surface-sunken px-4">
+    <View
+      className="flex-row items-center justify-between border-b border-surface-border bg-surface-sunken px-4"
+      style={{
+        height: 48,
+        // In the WebView APK and iOS standalone PWA the page renders behind
+        // the device status bar/notch. env(safe-area-inset-top) pushes the
+        // header down so the logo isn't hidden under "8:51"/clock.
+        paddingTop: 'env(safe-area-inset-top)' as any,
+        boxSizing: 'content-box' as any,
+      }}
+    >
       {isMobile ? (
         <View className="flex-row items-center gap-2">
           <SnapViralLogo size={24} />

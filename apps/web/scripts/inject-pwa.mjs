@@ -36,11 +36,19 @@ const HEAD_INJECTION = `
 
 let html = readFileSync(INDEX, 'utf8');
 
-if (html.includes('rel="manifest"')) {
-  console.log('[inject-pwa] already injected — skipping');
-  process.exit(0);
+// Always upgrade the viewport meta to include viewport-fit=cover so that
+// CSS env(safe-area-inset-*) resolves in the APK and iOS standalone PWA.
+// Idempotent — only rewrites if it doesn't already say viewport-fit.
+if (!html.includes('viewport-fit=cover')) {
+  html = html.replace(
+    /<meta\s+name="viewport"\s+content="[^"]*"\s*\/?>/,
+    '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />',
+  );
 }
 
-html = html.replace('</head>', `${HEAD_INJECTION}</head>`);
+if (!html.includes('rel="manifest"')) {
+  html = html.replace('</head>', `${HEAD_INJECTION}</head>`);
+}
+
 writeFileSync(INDEX, html);
-console.log('[inject-pwa] injected manifest + icons + sw registration into dist/index.html');
+console.log('[inject-pwa] viewport+manifest+icons+sw registration ensured in dist/index.html');
