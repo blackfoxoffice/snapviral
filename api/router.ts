@@ -1168,7 +1168,38 @@ async function generateTopicsRoute(req: VercelRequest, res: VercelResponse) {
   if (!spec) return fail(res, 400, 'invalid_category');
 
   const nicheClause = niche ? ` focused on "${niche}".` : '';
+
+  // Inject a random twist on every call so the model branches differently
+  // each time the user taps the same category pill. Without this, the
+  // identical prompt + low temperature = same 3 topics on repeat.
+  const TWISTS = [
+    'pick something most people have never heard of',
+    'take a contrarian angle — challenge the conventional wisdom',
+    'lead with a specific number, date, or statistic',
+    'focus on the personal/human side of the story',
+    'find a surprising historical parallel',
+    'highlight a regional or local angle nobody else is covering',
+    'pick something that sounds impossible but is real',
+    'focus on the unintended consequence nobody talks about',
+    'find a behind-the-scenes detail that flips the public story',
+    'pick something nostalgic from the last 30 years',
+    'go ultra-niche — pick something only specialists know',
+    'find a connection between two unrelated fields',
+    'pick something with a strong visual hook',
+    'find the everyday object with a wild backstory',
+    'pick the underdog or the overlooked player',
+    'find the moment everything changed',
+    'pick something that aged badly in hindsight',
+    'find a controversy that was quietly resolved',
+    'pick something only obvious in retrospect',
+    'find the small detail that ended up mattering most',
+  ];
+  const twist = TWISTS[Math.floor(Math.random() * TWISTS.length)];
+  const nonce = Math.random().toString(36).slice(2, 10);
+
   const systemPrompt = `${spec.systemFraming}${nicheClause}
+
+For THIS request, the angle is: "${twist}". Every topic must fit this angle.
 
 Return a JSON object with this exact shape:
 {
@@ -1181,6 +1212,7 @@ Rules:
 - Written in ${langName}. Native script, no transliteration.
 - ${spec.isLive ? 'Verifiable, currently-trending. No speculation.' : 'Original or well-attested. No speculation as fact.'}
 - No duplicates. No numbering. No quotes inside the strings.
+- Pick topics you have NEVER suggested before — be deliberately varied.
 - Output ONLY the JSON object. No preamble, no markdown.`;
 
   // Live-search-only categories use Perplexity Sonar; everything else uses
@@ -1193,8 +1225,11 @@ Rules:
   try {
     const content = await callOpenRouter(req, {
       systemPrompt,
-      userPrompt: niche ? `${spec.userPrompt} (focus: ${niche})` : spec.userPrompt,
+      userPrompt:
+        (niche ? `${spec.userPrompt} (focus: ${niche})` : spec.userPrompt) +
+        ` — be fresh and surprising. [seed:${nonce}]`,
       model: spec.isLive ? liveModel : fastModel,
+      temperature: 0.95,
       jsonSchema: {
         type: 'object',
         properties: { topics: { type: 'array', items: { type: 'string' } } },
@@ -1236,17 +1271,32 @@ async function aiWriteRoute(req: VercelRequest, res: VercelResponse) {
   const language = body.language ?? 'en';
   const langName = LANG_NAME[language] ?? 'English';
 
+  const HEADLINE_ANGLES = [
+    'shock value — start with the unexpected detail',
+    'mystery — make the viewer need to know what happens next',
+    'authority — frame it like an expert just learned this',
+    'contrast — set up an expectation, then break it',
+    'urgency — make it feel like news that just broke',
+    'curiosity gap — hint at the answer without giving it',
+    'specificity — lead with a name, place, or number',
+    'controversy — surface the disagreement people care about',
+    'human stakes — what does this mean for one person',
+    'transformation — what changed or is changing',
+  ];
+  const angle = HEADLINE_ANGLES[Math.floor(Math.random() * HEADLINE_ANGLES.length)];
+  const nonce = Math.random().toString(36).slice(2, 10);
+
   const systemPrompt =
     kind === 'headline'
-      ? `You are a viral short-form video editor. Given a rough topic, write ONE final video headline in ${langName} that hooks the viewer. 8-14 words. Declarative or dramatic. No question marks unless essential. Native script, no transliteration. Output the headline ONLY — no quotes, no explanation, no markdown.`
-      : `You are a senior video editor. Given a video topic, write a single short paragraph (40-80 words) of EXTRA CONTEXT — the specific facts, angles, names, numbers, or perspectives the AI scriptwriter should weave into the script. Concrete and useful, not generic. Plain English. No bullet points. Output the paragraph ONLY — no preamble, no markdown.`;
+      ? `You are a viral short-form video editor. Given a rough topic, write ONE final video headline in ${langName} that hooks the viewer. 8-14 words. Declarative or dramatic. No question marks unless essential. Native script, no transliteration. For THIS headline use the angle: "${angle}". Write a fresh headline — do not reuse phrasing you've used before. Output the headline ONLY — no quotes, no explanation, no markdown.`
+      : `You are a senior video editor. Given a video topic, write a single short paragraph (40-80 words) of EXTRA CONTEXT — the specific facts, angles, names, numbers, or perspectives the AI scriptwriter should weave into the script. Concrete and useful, not generic. Pick a fresh angle each call. Plain English. No bullet points. Output the paragraph ONLY — no preamble, no markdown.`;
 
   try {
     const content = await callOpenRouter(req, {
       systemPrompt,
-      userPrompt: `Topic: ${topic}`,
+      userPrompt: `Topic: ${topic} [seed:${nonce}]`,
       model: 'openai/gpt-4o-mini',
-      temperature: 0.6,
+      temperature: 0.95,
     });
     const cleaned = content.replace(/^["']|["']$/g, '').trim();
     res.status(200).json({ text: cleaned });
