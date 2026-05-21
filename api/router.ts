@@ -118,6 +118,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (
       path.startsWith('/projects/') &&
       segments.length === 3 &&
+      segments[2] === 'download' &&
+      method === 'GET'
+    ) {
+      return await getDownloadUrl(req, res, segments[1] ?? '');
+    }
+    if (
+      path.startsWith('/projects/') &&
+      segments.length === 3 &&
       segments[2] === 'generate' &&
       method === 'POST'
     ) {
@@ -370,6 +378,34 @@ async function deleteProject(req: VercelRequest, res: VercelResponse, id: string
   const { error } = await supa.from('projects').delete().eq('id', id).eq('user_id', user.id);
   if (error) return fail(res, 500, error.message);
   res.status(204).end();
+}
+
+async function getDownloadUrl(req: VercelRequest, res: VercelResponse, id: string) {
+  if (!id) return fail(res, 400, 'missing_id');
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { user, supa } = r;
+
+  const { data: project, error } = await supa
+    .from('projects')
+    .select('final_video_path, status')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (error || !project?.final_video_path) {
+    return fail(res, 404, 'video_not_ready');
+  }
+
+  const { data: signed, error: signErr } = await supa.storage
+    .from('project-assets')
+    .createSignedUrl(project.final_video_path, 60 * 60);
+
+  if (signErr || !signed) {
+    return fail(res, 500, 'sign_failed');
+  }
+
+  res.status(200).json({ url: signed.signedUrl });
 }
 
 /**

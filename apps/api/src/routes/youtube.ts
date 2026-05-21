@@ -66,10 +66,15 @@ youtubeRouter.get('/callback', async (req: Request, res: Response) => {
 youtubeRouter.use(requireAuth);
 
 youtubeRouter.get('/auth-url', async (req: Request, res: Response) => {
-  const { user } = req as AuthedRequest;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
-  const url = await getOAuthUrl(redirectUri, user.id);
-  res.json({ url });
+  try {
+    const { user } = req as AuthedRequest;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/youtube/callback`;
+    const url = await getOAuthUrl(redirectUri, user.id);
+    res.json({ url });
+  } catch (e) {
+    console.error('[youtube] auth-url error:', e);
+    res.status(500).json({ error: e instanceof Error ? e.message : 'internal error' });
+  }
 });
 
 youtubeRouter.get('/status', async (req: Request, res: Response) => {

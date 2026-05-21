@@ -50,7 +50,7 @@ export function Select<T extends string = string>(props: SelectProps<T>) {
           onPress={() => setOpen(false)}
         >
           <Pressable
-            className="w-full max-w-md rounded-xl border border-surface-border bg-surface-card shadow-lg"
+            className="w-full max-w-md max-h-[80%] rounded-xl border border-surface-border bg-surface-card shadow-lg"
             onPress={(e) => e.stopPropagation?.()}
           >
             <View className="px-4 py-3 border-b border-surface-border">
