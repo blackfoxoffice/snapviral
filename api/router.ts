@@ -22,7 +22,7 @@ export const config = { maxDuration: 60 };
 // runs FFmpeg + the full ingest→compose pipeline. Vercel functions can't
 // run that work themselves (60s cap, no FFmpeg binary).
 const WORKER_BASE = (
-  process.env.PIPELINE_WORKER_URL ?? 'https://newsflow-api-production.up.railway.app'
+  process.env.PIPELINE_WORKER_URL ?? 'https://newsflow-api-production-f402.up.railway.app'
 ).replace(/\/$/, '');
 
 async function proxyToWorker(
