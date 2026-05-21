@@ -1,4 +1,5 @@
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import {
   LayoutGrid,
@@ -267,9 +268,11 @@ const MOBILE_TABS: NavItem[] = [
 ];
 
 export function BottomTabs() {
+  const { width } = useWindowDimensions();
   const pathname = usePathname();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isMobile = width < 768;
   const { sidebar } = useTheme();
   if (width >= 768) return null;
 
@@ -286,7 +289,8 @@ export function BottomTabs() {
         left: 0,
         right: 0,
         zIndex: 10,
-        paddingBottom: 'env(safe-area-inset-bottom)' as any,
+        paddingBottom: Platform.OS === 'web' ? `env(safe-area-inset-bottom, ${insets.bottom}px)` as any : insets.bottom,
+        boxShadow: Platform.OS === 'web' ? '0px -4px 12px rgba(0, 0, 0, 0.05)' : undefined,
       }}
     >
       {MOBILE_TABS.map((item) => {

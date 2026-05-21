@@ -1,4 +1,5 @@
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, Menu } from 'lucide-react-native';
 import { Input } from './ui/Input';
 import { useAuth } from '../lib/auth';
@@ -9,6 +10,7 @@ import { NotificationBell } from './NotificationBell';
 export function TopBar() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isMobile = width < 768;
   const { toggle } = useSidebarCollapsed();
 
@@ -17,16 +19,16 @@ export function TopBar() {
     user?.email?.split('@')[0] ??
     'Account';
 
+  // Add safe area inset for top, but on web/PWA this will properly handle the padding
+  // without relying on buggy CSS env variables.
+  const paddingTop = Platform.OS === 'web' ? `env(safe-area-inset-top, ${insets.top}px)` : insets.top;
+
   return (
     <View
       className="flex-row items-center justify-between border-b border-surface-border bg-surface-sunken px-4"
       style={{
-        height: 48,
-        // In the WebView APK and iOS standalone PWA the page renders behind
-        // the device status bar/notch. env(safe-area-inset-top) pushes the
-        // header down so the logo isn't hidden under "8:51"/clock.
-        paddingTop: 'env(safe-area-inset-top)' as any,
-        boxSizing: 'content-box' as any,
+        minHeight: 48,
+        paddingTop: paddingTop as any,
       }}
     >
       {isMobile ? (
