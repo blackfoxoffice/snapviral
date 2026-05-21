@@ -246,7 +246,7 @@ function ConnectedView({
   reconnecting: boolean;
 }) {
   return (
-    <View>
+    <View className="w-full">
       <View className="flex-row items-center gap-3 rounded-lg bg-accent-soft border border-accent-border p-3 mb-3">
         <View className="h-10 w-10 rounded-full bg-brand items-center justify-center">
           <Youtube size={18} color="#fff" />
@@ -287,7 +287,7 @@ function DisconnectedView({ onConnect, connecting }: { onConnect: () => void; co
     <Pressable
       onPress={onConnect}
       disabled={connecting}
-      className="border-2 border-dashed border-surface-border rounded-xl p-8 items-center justify-center"
+      className="w-full border-2 border-dashed border-surface-border rounded-xl p-8 items-center justify-center"
     >
       <View className="h-14 w-14 rounded-full bg-brand-soft items-center justify-center mb-3">
         <Youtube size={26} color="#E53935" />
@@ -312,7 +312,7 @@ function NoChannelHelp({
   connecting: boolean;
 }) {
   return (
-    <View className="rounded-xl border border-state-warning/25 bg-state-warning-soft p-4">
+    <View className="w-full rounded-xl border border-state-warning/25 bg-state-warning-soft p-4">
       <View className="flex-row items-center gap-2 mb-2">
         <AlertTriangle size={14} color="#F59E0B" />
         <Text className="text-[13px] font-bold text-state-warning uppercase tracking-wide">
