@@ -7,9 +7,12 @@ import {
   requireUser,
   requireAdmin,
   supabaseAnon,
+  WEB_BASE_URL,
+  SUPABASE_URL,
   type VercelRequest,
   type VercelResponse,
 } from './_lib.js';
+import { createClient } from '@supabase/supabase-js';
 
 // Allow up to 60s — needed for the Sonar Pro Search path (live web research).
 // Hobby plan's hard cap. Fast paths (gpt-4o-mini) return in 2-5s.
@@ -137,7 +140,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (path.startsWith('/pipeline/')) {
       return await proxyToWorker(req, res, `/api${path}`);
     }
-    // YouTube OAuth + upload also need the worker (it owns the OAuth state).
+
+    // ---- YouTube OAuth Connection (Vercel) ----
+    if (path === '/youtube/auth-url' && method === 'GET') return await getYouTubeAuthUrlRoute(req, res);
+    if (path === '/youtube/callback' && method === 'GET') return await youtubeCallbackRoute(req, res);
+    if (path === '/youtube/status' && method === 'GET') return await youtubeStatusRoute(req, res);
+    if (path === '/youtube/disconnect' && method === 'DELETE') return await youtubeDisconnectRoute(req, res);
+
+    // YouTube upload endpoint still needs the worker (it downloads video and pushes to YT)
     if (path.startsWith('/youtube/')) {
       return await proxyToWorker(req, res, `/api${path}`);
     }
@@ -1403,4 +1413,182 @@ async function deleteAdminSecretRoute(
   const { error } = await supa.rpc('admin_delete_secret', { p_key_name: keyName });
   if (error) return fail(res, 500, error.message);
   res.status(204).end();
+}
+
+// =====================================================================
+// YouTube OAuth Connection
+// =====================================================================
+function getSupaService() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing in Vercel');
+  return createClient(SUPABASE_URL, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+
+async function getClientCredentials() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  let clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  
+  if (!clientSecret) {
+    try {
+      const supa = getSupaService();
+      const { data } = await supa.rpc('read_secret', { secret_name: 'GOOGLE_CLIENT_SECRET' });
+      clientSecret = data;
+    } catch (e) {
+      // Ignore and throw main error below
+    }
+  }
+  
+  if (!clientId || !clientSecret) {
+    throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required. Make sure they are set in Vercel.');
+  }
+  return { clientId, clientSecret };
+}
+
+async function getYouTubeAuthUrlRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { user } = r;
+
+  try {
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${WEB_BASE_URL}/api/youtube/callback`;
+    const { clientId } = await getClientCredentials();
+
+    const scopes = [
+      'https://www.googleapis.com/auth/youtube.upload',
+      'https://www.googleapis.com/auth/youtube.readonly',
+    ].join(' ');
+
+    const stateData = { userId: user.id };
+    const stateStr = Buffer.from(JSON.stringify(stateData)).toString('base64');
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: scopes,
+      access_type: 'offline',
+      prompt: 'consent',
+      state: stateStr,
+    });
+
+    res.status(200).json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+  } catch (e: any) {
+    return fail(res, 500, e.message);
+  }
+}
+
+async function youtubeCallbackRoute(req: VercelRequest, res: VercelResponse) {
+  const code = Array.isArray(req.query.code) ? req.query.code[0] : req.query.code;
+  const stateB64 = Array.isArray(req.query.state) ? req.query.state[0] : req.query.state;
+  const webUrl = WEB_BASE_URL;
+
+  if (!code || !stateB64) {
+    return res.setHeader('Location', `${webUrl}/dashboard?error=youtube_auth_failed`).status(302).end();
+  }
+
+  let stateObj: { userId: string };
+  try {
+    stateObj = JSON.parse(Buffer.from(stateB64, 'base64').toString('utf8'));
+  } catch (e) {
+    return res.setHeader('Location', `${webUrl}/dashboard?error=invalid_state`).status(302).end();
+  }
+  
+  const userId = stateObj.userId;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? `${webUrl}/api/youtube/callback`;
+
+  try {
+    const supa = getSupaService();
+    const { clientId, clientSecret } = await getClientCredentials();
+    
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+    
+    if (!tokenRes.ok) throw new Error(await tokenRes.text());
+    const tokenData = (await tokenRes.json()) as any;
+
+    const access_token = tokenData.access_token;
+    const refresh_token = tokenData.refresh_token;
+    const expires_in = tokenData.expires_in;
+
+    const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    if (!chRes.ok) throw new Error('Failed to fetch channel info');
+    const chJson = (await chRes.json()) as any;
+    const channelName = chJson.items?.[0]?.snippet?.title ?? 'YouTube Channel';
+
+    const newExpiry = new Date(Date.now() + expires_in * 1000);
+
+    const updateData: Record<string, any> = {
+      yt_access_token: access_token,
+      yt_token_expires_at: newExpiry.toISOString(),
+      yt_channel_name: channelName,
+    };
+    if (refresh_token) {
+      updateData.yt_refresh_token = refresh_token;
+    }
+
+    const { error } = await supa
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+
+    return res.setHeader('Location', `${webUrl}/dashboard?success=youtube_connected`).status(302).end();
+  } catch (e: any) {
+    console.error('YouTube callback error:', e);
+    return res.setHeader('Location', `${webUrl}/dashboard?error=youtube_auth_failed`).status(302).end();
+  }
+}
+
+async function youtubeStatusRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { user, supa } = r;
+
+  const { data, error } = await supa
+    .from('profiles')
+    .select('yt_refresh_token, yt_channel_name')
+    .eq('id', user.id)
+    .single();
+
+  if (error) return fail(res, 500, error.message);
+
+  const isConnected = !!data?.yt_refresh_token;
+  res.status(200).json({
+    connected: isConnected,
+    channelName: isConnected ? data.yt_channel_name : null,
+  });
+}
+
+async function youtubeDisconnectRoute(req: VercelRequest, res: VercelResponse) {
+  const r = await requireUser(req);
+  if ('error' in r) return fail(res, r.error.status, r.error.message);
+  const { user, supa } = r;
+
+  const { error } = await supa
+    .from('profiles')
+    .update({
+      yt_access_token: null,
+      yt_refresh_token: null,
+      yt_token_expires_at: null,
+      yt_channel_name: null,
+    })
+    .eq('id', user.id);
+
+  if (error) return fail(res, 500, error.message);
+
+  res.status(200).json({ success: true });
 }
