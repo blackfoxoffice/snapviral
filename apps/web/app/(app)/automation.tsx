@@ -214,10 +214,14 @@ export default function AutomationPage() {
           <PaidPlanRequired
             currentPlan={status.plan}
             onUpgrade={() => router.push('/billing' as any)}
+            isMobile={isMobile}
           />
         ) : null}
         {isPaid && !ytConnected ? (
-          <YouTubeRequired onConnect={() => router.push('/youtube' as any)} />
+          <YouTubeRequired 
+            onConnect={() => router.push('/youtube' as any)} 
+            isMobile={isMobile} 
+          />
         ) : null}
 
         {/* Daily progress */}
@@ -234,7 +238,7 @@ export default function AutomationPage() {
         {/* Settings card */}
         <Card className="mt-5">
           <Card.Header>
-            <View className="flex-row items-center justify-between">
+            <View className={`flex-row justify-between ${isMobile ? 'items-start flex-wrap gap-2' : 'items-center'}`}>
               <View>
                 <Text className="text-[14px] font-semibold text-ink">Automation settings</Text>
                 <Text className="text-[12px] text-ink-muted mt-0.5">
@@ -302,7 +306,7 @@ export default function AutomationPage() {
             </View>
 
             {/* Per-video defaults */}
-            <View className={isMobile ? 'gap-3' : 'flex-row gap-3'}>
+            <View className={isMobile ? 'flex-col gap-3' : 'flex-row gap-3'}>
               <View style={{ flex: 1 }}>
                 <Select<ProjectLanguage>
                   label="Language"
@@ -321,7 +325,7 @@ export default function AutomationPage() {
               </View>
             </View>
 
-            <View className={isMobile ? 'gap-3' : 'flex-row gap-3'}>
+            <View className={isMobile ? 'flex-col gap-3' : 'flex-row gap-3'}>
               <View style={{ flex: 1 }}>
                 <Select
                   label="Source mode"
@@ -409,7 +413,7 @@ export default function AutomationPage() {
         {/* Topic queue */}
         <Card className="mt-5">
           <Card.Header>
-            <View className="flex-row items-center justify-between">
+            <View className={`flex-row justify-between ${isMobile ? 'items-start flex-wrap gap-2' : 'items-center'}`}>
               <View>
                 <Text className="text-[14px] font-semibold text-ink">Topic queue</Text>
                 <Text className="text-[12px] text-ink-muted mt-0.5">
@@ -441,7 +445,7 @@ export default function AutomationPage() {
                 Perplexity Sonar searches the live web and writes 12 trending news headlines in your
                 automation language. Pick the ones you like and add them in one click.
               </Text>
-              <View className={isMobile ? 'gap-2' : 'flex-row gap-2'}>
+              <View className={isMobile ? 'flex-col gap-2' : 'flex-row gap-2'}>
                 <View style={{ flex: 1 }}>
                   <Input
                     value={niche}
@@ -555,7 +559,7 @@ export default function AutomationPage() {
                   'Vijay\'s upcoming film'
                 }
               />
-              <View className="flex-row justify-between items-center mt-2">
+              <View className={`flex-row justify-between mt-2 ${isMobile ? 'flex-wrap gap-2 items-start' : 'items-center'}`}>
                 <Text className="text-[10px] text-ink-subtle">
                   {topicsInput.split('\n').filter((s) => s.trim().length >= 3).length} ready to add
                 </Text>
@@ -706,13 +710,15 @@ export default function AutomationPage() {
 function PaidPlanRequired({
   currentPlan,
   onUpgrade,
+  isMobile,
 }: {
   currentPlan: string;
   onUpgrade: () => void;
+  isMobile: boolean;
 }) {
   return (
     <View
-      className="rounded-xl p-4 mb-5 flex-row items-start gap-3"
+      className={`rounded-xl p-4 mb-5 ${isMobile ? 'flex-col items-stretch gap-3' : 'flex-row items-start gap-3'}`}
       style={{
         backgroundColor: 'rgba(229,57,53,0.06)',
         borderWidth: 1,
@@ -737,10 +743,10 @@ function PaidPlanRequired({
   );
 }
 
-function YouTubeRequired({ onConnect }: { onConnect: () => void }) {
+function YouTubeRequired({ onConnect, isMobile }: { onConnect: () => void; isMobile: boolean }) {
   return (
     <View
-      className="rounded-xl p-4 mb-5 flex-row items-start gap-3"
+      className={`rounded-xl p-4 mb-5 ${isMobile ? 'flex-col items-stretch gap-3' : 'flex-row items-start gap-3'}`}
       style={{
         backgroundColor: 'rgba(255,179,0,0.06)',
         borderWidth: 1,

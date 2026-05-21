@@ -103,7 +103,7 @@ export default function YouTubePage() {
         {/* Connection card */}
         <Card className="mb-5">
           <Card.Header>
-            <View className="flex-row items-center justify-between">
+            <View className={`flex-row justify-between ${isMobile ? 'items-start flex-wrap gap-2' : 'items-center'}`}>
               <View>
                 <Text className="text-[14px] font-semibold text-ink">Channel connection</Text>
                 <Text className="text-[12px] text-ink-muted mt-0.5">
@@ -137,7 +137,7 @@ export default function YouTubePage() {
         </Card>
 
         {status?.connected ? (
-          <View className={isMobile ? 'gap-4' : 'flex-row gap-4'}>
+          <View className={isMobile ? 'flex-col gap-4' : 'flex-row gap-4'}>
             <StatTile label="Published" value={published.length} Icon={CheckCircle2} accent="#00C853" />
             <StatTile label="Scheduled" value={scheduled.length} Icon={Calendar} accent="#F59E0B" />
             <StatTile label="Ready to publish" value={ready.length} Icon={Upload} accent="#2563EB" />
@@ -270,7 +270,7 @@ function ConnectedView({
           <ExternalLink size={14} color="#64748B" />
         </Pressable>
       </View>
-      <View className="flex-row gap-2">
+      <View className="flex-row flex-wrap gap-2">
         <Button variant="secondary" size="sm" onPress={onReconnect} loading={reconnecting} leftIcon={<RefreshCw size={12} color="#475569" />}>
           Re-authorize
         </Button>
