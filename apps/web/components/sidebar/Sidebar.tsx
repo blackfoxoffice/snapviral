@@ -261,7 +261,7 @@ export function Sidebar() {
 // Compact bottom-tab bar for mobile. Only the 5 items that matter most.
 const MOBILE_TABS: NavItem[] = [
   { href: '/dashboard', label: 'Home', Icon: LayoutGrid },
-  { href: '/library', label: 'Library', Icon: Library },
+  { href: '/youtube', label: 'YouTube', Icon: Youtube },
   { href: '/projects/new', label: 'New', Icon: Plus },
   { href: '/automation', label: 'Auto', Icon: Zap },
   { href: '/settings', label: 'Settings', Icon: Settings },
