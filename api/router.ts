@@ -7,9 +7,12 @@ import {
   requireUser,
   requireAdmin,
   supabaseAnon,
+  WEB_BASE_URL,
+  SUPABASE_URL,
   type VercelRequest,
   type VercelResponse,
 } from './_lib.js';
+import { createClient } from '@supabase/supabase-js';
 
 // Allow up to 60s — needed for the Sonar Pro Search path (live web research).
 // Hobby plan's hard cap. Fast paths (gpt-4o-mini) return in 2-5s.
@@ -137,7 +140,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (path.startsWith('/pipeline/')) {
       return await proxyToWorker(req, res, `/api${path}`);
     }
-    // YouTube OAuth + upload also need the worker (it owns the OAuth state).
+
+    // ---- YouTube OAuth Connection (Vercel) ----
+    if (path === '/youtube/auth-url' && method === 'GET') return await getYouTubeAuthUrlRoute(req, res);
+    if (path === '/youtube/callback' && method === 'GET') return await youtubeCallbackRoute(req, res);
+    if (path === '/youtube/status' && method === 'GET') return await youtubeStatusRoute(req, res);
+    if (path === '/youtube/disconnect' && method === 'DELETE') return await youtubeDisconnectRoute(req, res);
+
+    // YouTube upload endpoint still needs the worker (it downloads video and pushes to YT)
     if (path.startsWith('/youtube/')) {
       return await proxyToWorker(req, res, `/api${path}`);
     }
