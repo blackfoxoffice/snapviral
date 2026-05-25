@@ -423,43 +423,26 @@ function EmptyStudio({ onNew }: { onNew: () => void }) {
   );
 }
 
-let deferredPrompt: any = null;
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    window.dispatchEvent(new Event('pwa-install-ready'));
-  });
+const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/8o2Ux85qjzGQxVmRLzPLtt.apk';
+
+function openAndroidApk() {
+  if (Platform.OS === 'web') {
+    const a = document.createElement('a');
+    a.href = ANDROID_APK_URL;
+    a.download = 'snapviral-pwa.apk';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } else {
+    Linking.openURL(ANDROID_APK_URL);
+  }
 }
 
 function DownloadAppCard() {
-  const [canInstall, setCanInstall] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (deferredPrompt) setCanInstall(true);
-
-    const handler = () => setCanInstall(true);
-    window.addEventListener('pwa-install-ready', handler);
-    return () => window.removeEventListener('pwa-install-ready', handler);
-  }, []);
-
-  const handleInstall = async () => {
-    if (canInstall && deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        deferredPrompt = null;
-        setCanInstall(false);
-      }
-    } else if (Platform.OS === 'web') {
-      alert('To install: tap the share or menu button in your browser and select "Add to Home Screen". This creates a native App on your device!');
-    }
-  };
-
   return (
     <Pressable
-      onPress={handleInstall}
+      onPress={openAndroidApk}
       className="rounded-xl overflow-hidden active:opacity-90"
       style={{
         backgroundColor: '#0F172A',
@@ -481,18 +464,16 @@ function DownloadAppCard() {
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
-            Get the SnapViral App
+            Get the SnapViral app
           </Text>
           <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
-            PWA WebAPK · &lt; 2 MB · Instant install
+            Android APK · 61 MB · PWA build
           </Text>
         </View>
         <Download size={16} color="#FFFFFF" />
       </View>
       <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 10 }}>
-        {canInstall 
-          ? 'Tap here to install the native app on your device instantly.' 
-          : 'Install directly from your browser menu ("Add to Home Screen").'}
+        Direct download. Enable “Install from unknown sources” the first time.
       </Text>
     </Pressable>
   );
