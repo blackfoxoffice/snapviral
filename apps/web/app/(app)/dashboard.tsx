@@ -423,19 +423,17 @@ function EmptyStudio({ onNew }: { onNew: () => void }) {
   );
 }
 
-const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/8o2Ux85qjzGQxVmRLzPLtt.apk';
+const ANDROID_APK_URL = '/snapviral.apk';
 
 function openAndroidApk() {
-  if (Platform.OS === 'web') {
+  if (typeof window !== 'undefined') {
     const a = document.createElement('a');
     a.href = ANDROID_APK_URL;
-    a.download = 'snapviral-pwa.apk';
+    a.download = 'snapviral.apk';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
     a.click();
     a.remove();
-  } else {
-    Linking.openURL(ANDROID_APK_URL);
   }
 }
 
@@ -467,7 +465,7 @@ function DownloadAppCard() {
             Get the SnapViral app
           </Text>
           <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
-            Android APK · 61 MB · PWA build
+            Android APK · 88 MB · Direct Download
           </Text>
         </View>
         <Download size={16} color="#FFFFFF" />

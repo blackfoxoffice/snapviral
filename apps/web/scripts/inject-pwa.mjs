@@ -31,20 +31,18 @@ const HEAD_INJECTION = `
         navigator.serviceWorker.register('/sw.js').catch(function () {});
       });
     }
+    // Fix for Android PWA overlap: only use viewport-fit=cover on iOS
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+      var vp = document.querySelector('meta[name="viewport"]');
+      if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover');
+    }
   </script>
 `;
 
 let html = readFileSync(INDEX, 'utf8');
 
-// Always upgrade the viewport meta to include viewport-fit=cover so that
-// CSS env(safe-area-inset-*) resolves in the APK and iOS standalone PWA.
-// Idempotent — only rewrites if it doesn't already say viewport-fit.
-if (!html.includes('viewport-fit=cover')) {
-  html = html.replace(
-    /<meta\s+name="viewport"\s+content="[^"]*"\s*\/?>/,
-    '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />',
-  );
-}
+// Do not statically inject viewport-fit=cover anymore; it breaks Android PWA padding.
+// The script inside HEAD_INJECTION will add it dynamically for iOS.
 
 if (!html.includes('rel="manifest"')) {
   html = html.replace('</head>', `${HEAD_INJECTION}</head>`);

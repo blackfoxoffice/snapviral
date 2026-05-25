@@ -1265,8 +1265,9 @@ Rules:
   // a fast non-search model so the round-trip fits the Hobby 60s function
   // limit. Sonar Pro Search regularly hits 30-60s on cold prompts, which
   // browsers/Vercel were aborting as "HTTP request cancelled".
+  // Using the much faster `perplexity/sonar` to ensure we stay under Vercel's 10s limit.
   const fastModel = 'openai/gpt-4o-mini';
-  const liveModel = 'perplexity/sonar-pro-search';
+  const liveModel = 'perplexity/sonar';
 
   try {
     const content = await callOpenRouter(req, {
